@@ -64,6 +64,41 @@ main {
 .form-group input, .form-group select { padding: 0.75rem 1rem; background: var(--bg-color); border: 1px solid var(--secondary-color); border-radius: 8px; color: var(--text-color); font-family: var(--font-family); font-size: 1rem; transition: border-color 0.3s, box-shadow 0.3s; }
 .form-group input:focus, .form-group select:focus { outline: 0; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(251, 191, 36, .3); }
 input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+/* 
+ * ===============================================
+ * ===   Custom Select Dropdown Styles (NEW)   ===
+ * ===============================================
+*/
+/* 1. The wrapper becomes a positioning context */
+.select-wrapper {
+  position: relative;
+}
+
+/* 2. Hide the default arrow from the browser */
+.select-wrapper select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  /* Add padding to prevent text from overlapping our new arrow */
+  padding-right: 2.5rem;
+}
+
+/* 3. Create our custom arrow using a pseudo-element */
+.select-wrapper::after {
+  content: '▼'; /* You can also use SVG as a background-image */
+  font-size: 0.8rem;
+  color: var(--primary-color);
+  
+  position: absolute;
+  right: 1rem; /* Position on the right */
+  top: 55%; /* Roughly center vertically (adjust if needed) */
+
+  /* This is crucial: it allows clicks to "pass through" the arrow to the select element */
+  pointer-events: none; 
+}
+
+
 button { padding: .8rem 1.5rem; border: none; border-radius: 8px; background: var(--primary-color); color: #111; font-weight: 700; font-size: 1rem; cursor: pointer; transition: transform .2s, background-color .2s; margin-top: 1rem; }
 button:hover { transform: translateY(-3px); background-color: #fca510; }
 .error-message { color: #ef4444; font-size: .9rem; }
@@ -129,22 +164,14 @@ footer { padding-top: 1rem; color: #666; font-size: .9rem; }
     flex-grow: 0;
   }
 
-  /* 
-   * (THE FINAL FIX)
-   * The container for the grid must also stop trying to grow.
-   * This allows its size to be determined by the now-unconstrained SVG inside it.
-   */
   .life-grid-container {
     flex-grow: 0;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
   }
 
   .life-grid-svg {
     max-height: none; 
-  }
-  
-  .life-grid-container {
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
   }
 
   header h1 {

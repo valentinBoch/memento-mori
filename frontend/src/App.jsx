@@ -122,7 +122,7 @@ function App() {
                 ref={dateInputRef} // NEW: Attach the ref here
               />
             </div>
-            <div className="form-group">
+            <div className="form-group select-wrapper">
               <label htmlFor="gender">{t('form.genderLabel')}</label>
               <select id="gender" name="gender" value={formData.gender} onChange={handleInputChange}>
                 <option value="homme">{t('form.genderMale', { years: LIFE_EXPECTANCY.homme })}</option>
