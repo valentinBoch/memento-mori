@@ -10,6 +10,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* MODIFICATION: Apply background to both <html> and <body> for full coverage */
 html, body {
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -24,17 +25,18 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* On desktop, the app takes the full screen height */
   height: 100vh;
   max-height: 100vh;
   text-align: center;
   
   /* 
-   * MODIFICATION POUR LA "SAFE AREA" D'IOS
-   * On remplace le 'padding' simple par des paddings spécifiques.
-   * On utilise calc() pour ajouter la valeur de la safe area (l'encoche, etc.)
-   * à notre padding de base de 1rem.
-   * La fonction env() avec une valeur par défaut (0px) assure la compatibilité
-   * avec les navigateurs non-iOS.
+   * MODIFICATION FOR IOS "SAFE AREA"
+   * We replace the simple 'padding' with specific ones.
+   * We use calc() to add the safe area value (for the notch, etc.)
+   * to our base padding of 1rem.
+   * The env() function with a fallback (0px) ensures compatibility
+   * with non-iOS browsers.
   */
   padding-top: calc(1rem + env(safe-area-inset-top, 0px));
   padding-right: calc(1rem + env(safe-area-inset-right, 0px));
@@ -59,9 +61,10 @@ main {
   align-items: center;
   width: 100%;
   padding: 1rem 0;
-  min-height: 0;
+  min-height: 0; /* Flexbox trick to allow shrinking */
 }
 
+/* --- Form Styles --- */
 .input-form { background: #1a1a1a; padding: 2.5rem; border-radius: 16px; border: 1px solid #2a2a2a; display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 450px; animation: fadeInUp 1s ease-out; }
 .form-group { display: flex; flex-direction: column; text-align: left; }
 .form-group label { margin-bottom: 0.5rem; font-weight: 700; color: #ccc; }
@@ -72,7 +75,7 @@ button { padding: .8rem 1.5rem; border: none; border-radius: 8px; background: va
 button:hover { transform: translateY(-3px); background-color: #fca510; }
 .error-message { color: #ef4444; font-size: .9rem; }
 
-
+/* --- Life Grid Styles --- */
 .life-grid-container {
   width: 100%;
   display: flex;
@@ -97,9 +100,11 @@ button:hover { transform: translateY(-3px); background-color: #fca510; }
   height: auto;
   max-width: 1200px;
   margin: 0 auto;
+  /* On desktop, this constrains the SVG to fit inside the viewport */
   max-height: 100%; 
 }
 
+/* --- SVG Dot Styles --- */
 circle.dot { transition: fill 0.2s ease-out, filter 0.2s ease-out, transform 0.2s ease-out; cursor: default; transform-origin: center; }
 circle.dot.past { fill: var(--primary-color); }
 circle.dot.past:hover { filter: brightness(1.2); }
@@ -114,9 +119,56 @@ circle.dot.current:hover { filter: none; }
 footer { padding-top: 1rem; color: #666; font-size: .9rem; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width:768px) {
-  header h1 { font-size: 2.5rem; }
-  circle.dot:hover { filter: none; }
-  circle.dot.future:hover { fill: var(--future-dot-color); }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1, transform: translateY(0); } }
+
+/* ===================================== */
+/* ===   MOBILE RESPONSIVE STYLES      === */
+/* ===================================== */
+
+/* This targets phones and smaller tablets */
+@media (max-width: 768px) {
+  
+  /* 1. Allow the page to grow taller than the screen */
+  .App {
+    /* Instead of a fixed height, we set a minimum height. */
+    /* The app will be at least the screen's height, but can grow taller. */
+    min-height: 100vh;
+    height: auto; /* Height adapts to content */
+    max-height: none; /* We remove the max-height constraint */
+  }
+
+  /* 2. "Free" the grid from its height constraint */
+  .life-grid-svg {
+    /* The grid can now take up all the vertical space it needs, */
+    /* making it much larger and more readable. */
+    max-height: none; 
+  }
+
+  /* 3. (Optional but recommended) Handle horizontal overflow */
+  /* If the grid is still wider than the phone screen, */
+  /* this adds a horizontal scrollbar just for the grid, */
+  /* which prevents the dots from being distorted. */
+  .life-grid-container {
+    overflow-x: auto;
+    padding-bottom: 0.5rem; /* A little space for the scrollbar */
+  }
+
+  /* Bonus: Adjusting font sizes and spacings for better readability */
+  header h1 {
+    font-size: 2.5rem;
+  }
+  .subtitle {
+    font-size: 1rem;
+  }
+  .input-form {
+    padding: 1.5rem;
+  }
+  
+  /* Disable hover effects on touch devices for a cleaner experience */
+  circle.dot:hover {
+    filter: none;
+  }
+  circle.dot.future:hover {
+    fill: var(--future-dot-color);
+  }
 }
