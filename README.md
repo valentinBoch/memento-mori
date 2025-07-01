@@ -18,11 +18,12 @@ A web application to visualize your life, week by week, based on your life expec
 
 **Form View**
 
-<img width="595" alt="Form View" src="https://github.com/user-attachments/assets/0fcdd7cc-d1fe-487a-9ed6-3332a54bd49b" />
-
+<img width="595" alt="Form View" src="https://github.com/user-attachments/assets/d0aa961b-d739-4563-bb8d-f7dc7bee4636" />
 
 **Generated Grid View**
-<img width="929" alt="Grid View" src="https://github.com/user-attachments/assets/57bd5c27-b801-42c9-833c-2c80636a0a62" />
+
+<img width="929" alt="Grid View" src="https://github.com/user-attachments/assets/398aa9d7-d7b9-4f90-9d9d-2570303619fb" />
+
 
 
 ## ✨ Core Features
