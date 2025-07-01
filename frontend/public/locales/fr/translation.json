@@ -1,0 +1,29 @@
+{
+  "title": "Memento Mori",
+  "subtitle": "\"Souviens-toi que tu vas mourir.\" Visualisez votre vie, semaine par semaine.",
+  "form": {
+    "dobLabel": "Votre date de naissance",
+    "genderLabel": "Vous êtes",
+    "genderMale": "Un homme (espérance de vie {{years}} ans)",
+    "genderFemale": "Une femme (espérance de vie {{years}} ans)",
+    "genderCustom": "Personnaliser",
+    "customAgeLabel": "Espérance de vie personnalisée (années)",
+    "submitButton": "Générer ma vie"
+  },
+  "error": {
+    "noDob": "Veuillez entrer votre date de naissance.",
+    "futureDob": "La date de naissance ne peut pas être dans le futur."
+  },
+  "stats": {
+    "percentageLived": "{{percentage}}% de votre vie écoulée.",
+    "weeksLived_one": "{{count}} semaine vécue.",
+    "weeksLived_other": "{{count}} semaines vécues.",
+    "weeksLeft_one": "{{count}} semaine à venir.",
+    "weeksLeft_other": "{{count}} semaines à venir."
+  },
+  "tooltip": {
+    "weekOf": "Semaine du {{date}}"
+  },
+  "resetButton": "Recommencer",
+  "footer": "Chaque point est une semaine. Chaque ligne une année."
+}

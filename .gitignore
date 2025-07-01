@@ -1,0 +1,30 @@
+# frontend/src/App.css (final version without the vertical scroll)
+
+# Dependencies
+/node_modules
+/*/node_modules
+
+# Build directory
+/dist
+/*/dist
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite-specific files
+.vite
+.vite-temp
+
+# Environment variables
+.env
+.env.*
+
+# IDE and editor directories
+.idea/
+.vscode/
+
+# macOS specific
+.DS_Store

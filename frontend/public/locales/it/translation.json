@@ -1,0 +1,29 @@
+{
+  "title": "Memento Mori",
+  "subtitle": "\"Ricorda che devi morire.\" Visualizza la tua vita, settimana per settimana.",
+  "form": {
+    "dobLabel": "La tua data di nascita",
+    "genderLabel": "Sei",
+    "genderMale": "Un uomo ({{years}} anni di aspettativa di vita)",
+    "genderFemale": "Una donna ({{years}} anni di aspettativa di vita)",
+    "genderCustom": "Personalizza",
+    "customAgeLabel": "Aspettativa di vita personalizzata (anni)",
+    "submitButton": "Genera la mia vita"
+  },
+  "error": {
+    "noDob": "Per favore, inserisci la tua data di nascita.",
+    "futureDob": "La data di nascita non può essere nel futuro."
+  },
+  "stats": {
+    "percentageLived": "{{percentage}}% della tua vita trascorsa.",
+    "weeksLived_one": "{{count}} settimana vissuta.",
+    "weeksLived_other": "{{count}} settimane vissute.",
+    "weeksLeft_one": "{{count}} settimana rimanente.",
+    "weeksLeft_other": "{{count}} settimane rimanenti."
+  },
+  "tooltip": {
+    "weekOf": "Settimana del {{date}}"
+  },
+  "resetButton": "Ricomincia",
+  "footer": "Ogni punto è una settimana. Ogni riga è un anno."
+}

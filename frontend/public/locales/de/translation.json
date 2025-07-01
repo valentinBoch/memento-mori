@@ -1,0 +1,29 @@
+{
+  "title": "Memento Mori",
+  "subtitle": "\"Bedenke, dass du sterben musst.\" Visualisiere dein Leben, Woche für Woche.",
+  "form": {
+    "dobLabel": "Dein Geburtsdatum",
+    "genderLabel": "Du bist",
+    "genderMale": "Ein Mann ({{years}} Jahre Lebenserwartung)",
+    "genderFemale": "Eine Frau ({{years}} Jahre Lebenserwartung)",
+    "genderCustom": "Benutzerdefiniert",
+    "customAgeLabel": "Eigene Lebenserwartung (Jahre)",
+    "submitButton": "Mein Leben generieren"
+  },
+  "error": {
+    "noDob": "Bitte gib dein Geburtsdatum ein.",
+    "futureDob": "Das Geburtsdatum kann nicht in der Zukunft liegen."
+  },
+  "stats": {
+    "percentageLived": "{{percentage}}% deines Lebens gelebt.",
+    "weeksLived_one": "{{count}} Woche gelebt.",
+    "weeksLived_other": "{{count}} Wochen gelebt.",
+    "weeksLeft_one": "{{count}} verbleibende Woche.",
+    "weeksLeft_other": "{{count}} verbleibende Wochen."
+  },
+  "tooltip": {
+    "weekOf": "Woche vom {{date}}"
+  },
+  "resetButton": "Neu starten",
+  "footer": "Jeder Punkt ist eine Woche. Jede Zeile ist ein Jahr."
+}

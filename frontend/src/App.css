@@ -1,0 +1,112 @@
+/* frontend/src/App.css */
+:root {
+  --bg-color: #111111;
+  --text-color: #EAEAEA;
+  --primary-color: #FBBF24;
+  --secondary-color: #444444;
+  --future-dot-color: #2a2a2a;
+  --font-family: 'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-family); overflow-x: hidden; }
+
+.App {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* CHANGEMENT: On utilise toute la hauteur de l'écran */
+  height: 100vh;
+  max-height: 100vh;
+  text-align: center;
+  /* CHANGEMENT: Réduction du padding vertical */
+  padding: 1rem;
+}
+
+header, footer {
+  width: 100%;
+  max-width: 1200px;
+  /* CHANGEMENT: On indique que ces éléments ne doivent pas grandir */
+  flex-shrink: 0;
+}
+
+header h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: -2px; }
+.subtitle { font-size: 1.1rem; color: #999; margin-top: 0.5rem; max-width: 500px; margin: 0 auto; }
+
+main {
+  flex-grow: 1; /* Permet à main de prendre l'espace restant */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  /* CHANGEMENT: Réduction du padding et ajout d'une contrainte de hauteur */
+  padding: 1rem 0;
+  min-height: 0; /* Astuce flexbox pour permettre le rétrécissement */
+}
+
+/* ... Le style du formulaire reste identique ... */
+.input-form { background: #1a1a1a; padding: 2.5rem; border-radius: 16px; border: 1px solid #2a2a2a; display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 450px; animation: fadeInUp 1s ease-out; }
+.form-group { display: flex; flex-direction: column; text-align: left; }
+.form-group label { margin-bottom: 0.5rem; font-weight: 700; color: #ccc; }
+.form-group input, .form-group select { padding: 0.75rem 1rem; background: var(--bg-color); border: 1px solid var(--secondary-color); border-radius: 8px; color: var(--text-color); font-family: var(--font-family); font-size: 1rem; transition: border-color 0.3s, box-shadow 0.3s; }
+.form-group input:focus, .form-group select:focus { outline: 0; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(251, 191, 36, .3); }
+input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+button { padding: .8rem 1.5rem; border: none; border-radius: 8px; background: var(--primary-color); color: #111; font-weight: 700; font-size: 1rem; cursor: pointer; transition: transform .2s, background-color .2s; margin-top: 1rem; }
+button:hover { transform: translateY(-3px); background-color: #fca510; }
+.error-message { color: #ef4444; font-size: .9rem; }
+
+
+.life-grid-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 1.5s ease-in-out;
+  /* CHANGEMENT: On le rend flexible et on contraint sa hauteur */
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.stats {
+  /* CHANGEMENT: Réduction de la marge inférieure */
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: #aaa;
+  line-height: 1.6;
+}
+.stats p { margin: 0.2rem 0; }
+.stats span { font-size: 1.2rem; font-weight: 700; color: var(--primary-color); }
+
+.life-grid-svg {
+  width: 100%;
+  height: auto;
+  max-width: 1200px;
+  margin: 0 auto;
+  /* CHANGEMENT: La contrainte principale qui force le dézoom */
+  /* Elle prendra le maximum de place possible dans son conteneur flexible */
+  max-height: 100%; 
+}
+
+
+/* === Styles pour les points (inchangés) === */
+circle.dot { transition: fill 0.2s ease-out, filter 0.2s ease-out, transform 0.2s ease-out; cursor: default; transform-origin: center; }
+circle.dot.past { fill: var(--primary-color); }
+circle.dot.past:hover { filter: brightness(1.2); }
+circle.dot.future { fill: var(--future-dot-color); }
+circle.dot.future:hover { fill: var(--secondary-color); }
+circle.dot.current { fill: #FFFFFF; stroke: var(--primary-color); stroke-width: 1px; }
+circle.dot.current:hover { filter: none; }
+
+
+.reset-button { margin-top: 1rem; background-color: var(--secondary-color); color: var(--text-color); }
+.reset-button:hover { background-color: #555; }
+footer { padding-top: 1rem; color: #666; font-size: .9rem; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width:768px) {
+  header h1 { font-size: 2.5rem; }
+  circle.dot:hover { filter: none; }
+  circle.dot.future:hover { fill: var(--future-dot-color); }
+}

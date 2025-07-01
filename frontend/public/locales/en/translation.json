@@ -1,0 +1,29 @@
+{
+  "title": "Memento Mori",
+  "subtitle": "\"Remember you must die.\" Visualize your life, week by week.",
+  "form": {
+    "dobLabel": "Your date of birth",
+    "genderLabel": "You are",
+    "genderMale": "A man ({{years}} years life expectancy)",
+    "genderFemale": "A woman ({{years}} years life expectancy)",
+    "genderCustom": "Custom",
+    "customAgeLabel": "Custom life expectancy (years)",
+    "submitButton": "Generate my life"
+  },
+  "error": {
+    "noDob": "Please enter your date of birth.",
+    "futureDob": "Date of birth cannot be in the future."
+  },
+  "stats": {
+    "percentageLived": "{{percentage}}% of your life lived.",
+    "weeksLived_one": "{{count}} week lived.",
+    "weeksLived_other": "{{count}} weeks lived.",
+    "weeksLeft_one": "{{count}} week to come.",
+    "weeksLeft_other": "{{count}} weeks to come."
+  },
+  "tooltip": {
+    "weekOf": "Week of {{date}}"
+  },
+  "resetButton": "Start Over",
+  "footer": "Each dot is one week. Each row is one year."
+}
