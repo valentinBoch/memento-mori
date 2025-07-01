@@ -116,7 +116,7 @@ Now you can access the app in your browser at the address provided by Vite!
 The project is organized as a monorepo with two main folders:
 
 ```
-memento-mori-app/
+memento-mori/
 ├── backend/
 │   ├── server.js         # Express server setup
 │   └── package.json
