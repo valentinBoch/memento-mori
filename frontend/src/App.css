@@ -10,7 +10,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* MODIFICATION: Apply background to both <html> and <body> for full coverage */
+/* Apply background to both <html> and <body> for full viewport coverage */
 html, body {
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -32,11 +32,8 @@ body {
   
   /* 
    * MODIFICATION FOR IOS "SAFE AREA"
-   * We replace the simple 'padding' with specific ones.
-   * We use calc() to add the safe area value (for the notch, etc.)
-   * to our base padding of 1rem.
-   * The env() function with a fallback (0px) ensures compatibility
-   * with non-iOS browsers.
+   * Add padding to account for the notch and system bars on iOS.
+   * The env() function has a fallback for non-iOS browsers.
   */
   padding-top: calc(1rem + env(safe-area-inset-top, 0px));
   padding-right: calc(1rem + env(safe-area-inset-right, 0px));
@@ -47,21 +44,21 @@ body {
 header, footer {
   width: 100%;
   max-width: 1200px;
-  flex-shrink: 0;
+  flex-shrink: 0; /* Prevents header/footer from shrinking */
 }
 
 header h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: -2px; }
 .subtitle { font-size: 1.1rem; color: #999; margin-top: 0.5rem; max-width: 500px; margin: 0 auto; }
 
 main {
-  flex-grow: 1;
+  flex-grow: 1; /* Allows 'main' to stretch and fill remaining vertical space on desktop */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   width: 100%;
   padding: 1rem 0;
-  min-height: 0; /* Flexbox trick to allow shrinking */
+  min-height: 0; /* Flexbox trick to allow shrinking and prevent overflow issues */
 }
 
 /* --- Form Styles --- */
@@ -119,7 +116,7 @@ circle.dot.current:hover { filter: none; }
 footer { padding-top: 1rem; color: #666; font-size: .9rem; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1, transform: translateY(0); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ===================================== */
 /* ===   MOBILE RESPONSIVE STYLES      === */
@@ -130,30 +127,32 @@ footer { padding-top: 1rem; color: #666; font-size: .9rem; }
   
   /* 1. Allow the page to grow taller than the screen */
   .App {
-    /* Instead of a fixed height, we set a minimum height. */
-    /* The app will be at least the screen's height, but can grow taller. */
     min-height: 100vh;
-    height: auto; /* Height adapts to content */
-    max-height: none; /* We remove the max-height constraint */
+    height: auto;
+    max-height: none;
   }
 
-  /* 2. "Free" the grid from its height constraint */
+  /* 
+   * 2. (THE KEY FIX) Change the behavior of the main content area.
+   *    We tell 'main' to stop trying to grow to fill space and just
+   *    behave like a normal block whose height is determined by its content.
+  */
+  main {
+    flex-grow: 0;
+  }
+
+  /* 3. "Free" the grid from its height constraint */
   .life-grid-svg {
-    /* The grid can now take up all the vertical space it needs, */
-    /* making it much larger and more readable. */
     max-height: none; 
   }
 
-  /* 3. (Optional but recommended) Handle horizontal overflow */
-  /* If the grid is still wider than the phone screen, */
-  /* this adds a horizontal scrollbar just for the grid, */
-  /* which prevents the dots from being distorted. */
+  /* 4. Handle horizontal overflow for the grid */
   .life-grid-container {
     overflow-x: auto;
-    padding-bottom: 0.5rem; /* A little space for the scrollbar */
+    padding-bottom: 0.5rem;
   }
 
-  /* Bonus: Adjusting font sizes and spacings for better readability */
+  /* --- Bonus styles for better readability --- */
   header h1 {
     font-size: 2.5rem;
   }
