@@ -30,11 +30,7 @@ body {
   max-height: 100vh;
   text-align: center;
   
-  /* 
-   * MODIFICATION FOR IOS "SAFE AREA"
-   * Add padding to account for the notch and system bars on iOS.
-   * The env() function has a fallback for non-iOS browsers.
-  */
+  /* Add padding to account for the notch and system bars on iOS */
   padding-top: calc(1rem + env(safe-area-inset-top, 0px));
   padding-right: calc(1rem + env(safe-area-inset-right, 0px));
   padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
@@ -44,21 +40,21 @@ body {
 header, footer {
   width: 100%;
   max-width: 1200px;
-  flex-shrink: 0; /* Prevents header/footer from shrinking */
+  flex-shrink: 0;
 }
 
 header h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: -2px; }
 .subtitle { font-size: 1.1rem; color: #999; margin-top: 0.5rem; max-width: 500px; margin: 0 auto; }
 
 main {
-  flex-grow: 1; /* Allows 'main' to stretch and fill remaining vertical space on desktop */
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   width: 100%;
   padding: 1rem 0;
-  min-height: 0; /* Flexbox trick to allow shrinking and prevent overflow issues */
+  min-height: 0;
 }
 
 /* --- Form Styles --- */
@@ -97,7 +93,6 @@ button:hover { transform: translateY(-3px); background-color: #fca510; }
   height: auto;
   max-width: 1200px;
   margin: 0 auto;
-  /* On desktop, this constrains the SVG to fit inside the viewport */
   max-height: 100%; 
 }
 
@@ -122,37 +117,36 @@ footer { padding-top: 1rem; color: #666; font-size: .9rem; }
 /* ===   MOBILE RESPONSIVE STYLES      === */
 /* ===================================== */
 
-/* This targets phones and smaller tablets */
 @media (max-width: 768px) {
   
-  /* 1. Allow the page to grow taller than the screen */
   .App {
     min-height: 100vh;
     height: auto;
     max-height: none;
   }
 
-  /* 
-   * 2. (THE KEY FIX) Change the behavior of the main content area.
-   *    We tell 'main' to stop trying to grow to fill space and just
-   *    behave like a normal block whose height is determined by its content.
-  */
   main {
     flex-grow: 0;
   }
 
-  /* 3. "Free" the grid from its height constraint */
+  /* 
+   * (THE FINAL FIX)
+   * The container for the grid must also stop trying to grow.
+   * This allows its size to be determined by the now-unconstrained SVG inside it.
+   */
+  .life-grid-container {
+    flex-grow: 0;
+  }
+
   .life-grid-svg {
     max-height: none; 
   }
-
-  /* 4. Handle horizontal overflow for the grid */
+  
   .life-grid-container {
     overflow-x: auto;
     padding-bottom: 0.5rem;
   }
 
-  /* --- Bonus styles for better readability --- */
   header h1 {
     font-size: 2.5rem;
   }
@@ -163,7 +157,6 @@ footer { padding-top: 1rem; color: #666; font-size: .9rem; }
     padding: 1.5rem;
   }
   
-  /* Disable hover effects on touch devices for a cleaner experience */
   circle.dot:hover {
     filter: none;
   }
