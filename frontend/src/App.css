@@ -9,24 +9,42 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-family); overflow-x: hidden; }
+
+html, body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: var(--font-family);
+}
+
+body {
+  overflow-x: hidden;
+}
 
 .App {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* CHANGEMENT: On utilise toute la hauteur de l'écran */
   height: 100vh;
   max-height: 100vh;
   text-align: center;
-  /* CHANGEMENT: Réduction du padding vertical */
-  padding: 1rem;
+  
+  /* 
+   * MODIFICATION POUR LA "SAFE AREA" D'IOS
+   * On remplace le 'padding' simple par des paddings spécifiques.
+   * On utilise calc() pour ajouter la valeur de la safe area (l'encoche, etc.)
+   * à notre padding de base de 1rem.
+   * La fonction env() avec une valeur par défaut (0px) assure la compatibilité
+   * avec les navigateurs non-iOS.
+  */
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+  padding-right: calc(1rem + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(1rem + env(safe-area-inset-left, 0px));
 }
 
 header, footer {
   width: 100%;
   max-width: 1200px;
-  /* CHANGEMENT: On indique que ces éléments ne doivent pas grandir */
   flex-shrink: 0;
 }
 
@@ -34,18 +52,16 @@ header h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: -2px; }
 .subtitle { font-size: 1.1rem; color: #999; margin-top: 0.5rem; max-width: 500px; margin: 0 auto; }
 
 main {
-  flex-grow: 1; /* Permet à main de prendre l'espace restant */
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   width: 100%;
-  /* CHANGEMENT: Réduction du padding et ajout d'une contrainte de hauteur */
   padding: 1rem 0;
-  min-height: 0; /* Astuce flexbox pour permettre le rétrécissement */
+  min-height: 0;
 }
 
-/* ... Le style du formulaire reste identique ... */
 .input-form { background: #1a1a1a; padding: 2.5rem; border-radius: 16px; border: 1px solid #2a2a2a; display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 450px; animation: fadeInUp 1s ease-out; }
 .form-group { display: flex; flex-direction: column; text-align: left; }
 .form-group label { margin-bottom: 0.5rem; font-weight: 700; color: #ccc; }
@@ -63,13 +79,11 @@ button:hover { transform: translateY(-3px); background-color: #fca510; }
   flex-direction: column;
   align-items: center;
   animation: fadeIn 1.5s ease-in-out;
-  /* CHANGEMENT: On le rend flexible et on contraint sa hauteur */
   flex-grow: 1;
   min-height: 0;
 }
 
 .stats {
-  /* CHANGEMENT: Réduction de la marge inférieure */
   margin-bottom: 1rem;
   font-size: 1rem;
   color: #aaa;
@@ -83,13 +97,9 @@ button:hover { transform: translateY(-3px); background-color: #fca510; }
   height: auto;
   max-width: 1200px;
   margin: 0 auto;
-  /* CHANGEMENT: La contrainte principale qui force le dézoom */
-  /* Elle prendra le maximum de place possible dans son conteneur flexible */
   max-height: 100%; 
 }
 
-
-/* === Styles pour les points (inchangés) === */
 circle.dot { transition: fill 0.2s ease-out, filter 0.2s ease-out, transform 0.2s ease-out; cursor: default; transform-origin: center; }
 circle.dot.past { fill: var(--primary-color); }
 circle.dot.past:hover { filter: brightness(1.2); }
