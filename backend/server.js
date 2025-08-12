@@ -10,31 +10,25 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || "0.0.0.0";
 
-// Middlewares
+// Hardening de base
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
+// Middlewares généraux
 app.use(cors());
 app.use(express.json());
-
-// Security headers (désactive CSP par défaut pour éviter de bloquer les bundles; à configurer si besoin)
 app.use(helmet({ contentSecurityPolicy: false }));
-
-// HTTP request logging (skip during tests)
-if (process.env.NODE_ENV !== "test") {
-  app.use(morgan("combined"));
-}
-
-// Gzip/deflate compression
+if (process.env.NODE_ENV !== "test") app.use(morgan("combined"));
 app.use(compression());
 
-// On sert le dossier 'dist' qui sera au même niveau que le dossier 'backend'
+// Paths
 const buildPath = path.join(__dirname, "..", "frontend", "dist");
+const assetsPath = path.join(buildPath, "assets");
 
-// Cache agressif pour les assets fingerprintés (ex: dist/assets/*)
+// Statique: assets fingerprintés (cache long)
 app.use(
   "/assets",
-  express.static(path.join(buildPath, "assets"), {
+  express.static(assetsPath, {
     maxAge: "1y",
     immutable: true,
     index: false,
@@ -42,7 +36,7 @@ app.use(
   })
 );
 
-// Cache plus court pour le reste du build (sauf index.html)
+// Statique: reste du build (cache court)
 app.use(
   express.static(buildPath, {
     index: false,
@@ -51,36 +45,53 @@ app.use(
   })
 );
 
-// Healthcheck pour orchestrateurs (Docker/K8s)
-app.get("/healthz", (req, res) => {
+// Healthcheck
+app.get("/healthz", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-// 404 JSON par défaut pour les routes API inexistantes
-// NB: pas de '/api/*' (casse en path-to-regexp). On utilise un prefix middleware.
-app.use(/^\/api(\/|$)/, (req, res) => {
-  res.status(404).json({ error: "Not Found" });
+// ---------- IMPORTANT ----------
+// À partir d’ici, on n’utilise PLUS AUCUN pattern de route.
+// On gère tout via des middlewares sans chemin + conditions sur req.path.
+
+// 404 JSON pour toutes routes /api non gérées en amont
+app.use((req, res, next) => {
+  if (req.path && req.path.startsWith("/api")) {
+    return res.status(404).json({ error: "Not Found" });
+  }
+  return next();
 });
 
-// Catch-all SPA (toutes les routes NON /api doivent renvoyer index.html)
-// ⚠️ Surtout pas '*' : utiliser une regex qui exclut /api
-app.get(/^(?!\/api).*/, (req, res, next) => {
-  const indexFile = path.join(buildPath, "index.html");
-  res.setHeader("Cache-Control", "no-store");
-  res.sendFile(indexFile, (err) => {
-    if (err) return next(err);
-  });
+// Fallback SPA : servir index.html pour les requêtes GET non-API qui acceptent du HTML
+app.use((req, res, next) => {
+  // On cible les GET non-API, et on vérifie l'en-tête Accept pour éviter d’interférer avec des appels XHR
+  const isGet = req.method === "GET";
+  const isApi = req.path && req.path.startsWith("/api");
+  const acceptsHtml =
+    req.headers.accept && req.headers.accept.includes("text/html");
+
+  if (isGet && !isApi && acceptsHtml) {
+    const indexFile = path.join(buildPath, "index.html");
+    res.setHeader("Cache-Control", "no-store");
+    return res.sendFile(indexFile, (err) => (err ? next(err) : undefined));
+  }
+  return next();
+});
+
+// Dernière barrière: 404 générique pour tout le reste
+app.use((_req, res) => {
+  res.status(404).json({ error: "Not Found" });
 });
 
 // Gestion d'erreurs express
 // eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
+app.use((err, _req, res, next) => {
   console.error("Unhandled error:", err);
   if (res.headersSent) return next(err);
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-// Écoute + arrêt propre
+// Démarrage + arrêt propre
 const server = app.listen(PORT, HOST, () => {
   console.log(`Server is running on http://${HOST}:${PORT}`);
 });
