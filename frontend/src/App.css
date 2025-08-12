@@ -84,7 +84,10 @@ footer {
   flex-shrink: 0;
 }
 
+
 header { position: relative; }
+
+.header-text { padding-right: 10rem; }
 
 header h1 {
   font-size: clamp(2rem, 5vw, 3.5rem);
@@ -109,31 +112,42 @@ header h1 {
   gap: .75rem;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  z-index: 100; /* above header text */
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  height: 40px;
+  z-index: 100;
 }
 
 .toolbar .control select {
-  padding: 0.55rem 2.25rem 0.55rem 0.9rem;
+  padding: 0 2.25rem 0 0.9rem;
   background: var(--bg-color);
   border: 1px solid var(--secondary-color);
   border-radius: var(--radius-sm);
   color: var(--text-color);
   font: inherit;
+  height: 38px;
+  line-height: 38px;
 }
 
 .theme-toggle {
-  padding: 0.55rem 0.9rem;
   background: var(--bg-color);
   border: 1px solid var(--secondary-color);
   border-radius: var(--radius-sm);
   color: var(--text-color);
   font-weight: 700;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 34px;
+  padding: 0 0.75rem;
 }
 
 .theme-toggle:hover {
   border-color: #6a6a6a;
 }
+
+.toolbar .theme-toggle:hover { transform: none; border-color: #6a6a6a; }
+.toolbar button:hover { transform: none; }
 
 main {
   flex-grow: 1;
@@ -536,7 +550,11 @@ footer {
     top: 0.5rem;
     right: 0.5rem;
     gap: .5rem;
+    flex-wrap: wrap;
+    height: auto;
   }
+
+  .header-text { padding-right: 0; }
 }
 
 /* Utility */
@@ -550,4 +568,13 @@ footer {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Set default accent to teal */
+:root {
+  --primary-color: #14b8a6;
+  --primary-hover: #0ea89a;
+  --ring: rgba(20, 184, 166, 0.45);
+  --selection-bg: rgba(20, 184, 166, 0.3);
+  --primary-shadow: rgba(20, 184, 166, 0.2);
 }
