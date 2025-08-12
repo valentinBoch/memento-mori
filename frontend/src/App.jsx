@@ -217,8 +217,10 @@ function App() {
   return (
     <div className="App">
       <header>
-        <h1>{t('title')}</h1>
-        <p className="subtitle">{t('subtitle')}</p>
+        <div className="header-text">
+          <h1>{t('title')}</h1>
+          <p className="subtitle">{t('subtitle')}</p>
+        </div>
         <div className="toolbar">
           <div className="control">
             <label htmlFor="lang-select" className="visually-hidden">Langue</label>

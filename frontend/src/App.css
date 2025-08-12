@@ -84,6 +84,8 @@ footer {
   flex-shrink: 0;
 }
 
+header { position: relative; }
+
 header h1 {
   font-size: clamp(2rem, 5vw, 3.5rem);
   font-weight: 900;
@@ -100,12 +102,15 @@ header h1 {
 }
 
 .toolbar {
-  margin-top: 1rem;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
   display: flex;
   gap: .75rem;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
+  z-index: 100; /* above header text */
 }
 
 .toolbar .control select {
@@ -528,6 +533,8 @@ footer {
   }
 
   .toolbar {
+    top: 0.5rem;
+    right: 0.5rem;
     gap: .5rem;
   }
 }
