@@ -522,11 +522,12 @@ footer {
     max-height: none;
   }
 
-  /* Boost perceived size of the grid on small screens */
-  .life-grid-svg {
-    transform: scale(1.2);
-    transform-origin: top left;
-  }
+  /* Make dots larger without changing layout */
+  circle.dot { transform: scale(1.35); }
+  circle.dot.current { transform: scale(1.6); }
+
+  /* Avoid horizontal scroll on mobile */
+  .life-grid-container { overflow-x: hidden; }
 
   /* Slight stroke to enhance dot contrast on mobile */
   circle.dot {
@@ -586,9 +587,7 @@ footer {
 }
 
 @media (max-width: 420px) {
-  .life-grid-svg {
-    transform: scale(1.35);
-    transform-origin: top left;
-  }
+  circle.dot { transform: scale(1.55); }
+  circle.dot.current { transform: scale(1.8); }
   .stats { font-size: 1.1rem; }
 }
