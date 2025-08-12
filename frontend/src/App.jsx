@@ -5,6 +5,9 @@ import LifeGrid from './components/LifeGrid';
 import './App.css';
 import { setLanguage, getCurrentLanguage, setThemePreference, getThemePreference, setAccentPreference, getAccentPreference } from './i18n';
 
+// Utility to detect mobile platforms
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
 // Constants for clarity and easy maintenance
 const LIFE_EXPECTANCY = { homme: 80, femme: 85 };
 const LOCAL_STORAGE_KEY = 'momentoMoriData';
@@ -197,16 +200,62 @@ function App() {
           <form onSubmit={calculateWeeks} className="input-form">
             <div className="form-group">
               <label htmlFor="dob">{t('form.dobLabel')}</label>
-              <input
-                type="date"
-                id="dob"
-                name="dob"
-                value={formData.dob}
-                onChange={handleInputChange}
-                required
-                max={todayStr}
-                ref={dateInputRef} // NEW: Attach the ref here
-              />
+              {isMobile ? (
+                <div className="dob-segmented">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    name="dob-day"
+                    placeholder="JJ"
+                    value={formData.dob ? formData.dob.split('-')[2] : ''}
+                    onChange={(e) => {
+                      const day = e.target.value.replace(/\D/g, '').slice(0, 2);
+                      const parts = formData.dob ? formData.dob.split('-') : ['', '', ''];
+                      parts[2] = day;
+                      setFormData({ ...formData, dob: parts.join('-') });
+                    }}
+                  />
+                  <span>-</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    name="dob-month"
+                    placeholder="MM"
+                    value={formData.dob ? formData.dob.split('-')[1] : ''}
+                    onChange={(e) => {
+                      const month = e.target.value.replace(/\D/g, '').slice(0, 2);
+                      const parts = formData.dob ? formData.dob.split('-') : ['', '', ''];
+                      parts[1] = month;
+                      setFormData({ ...formData, dob: parts.join('-') });
+                    }}
+                  />
+                  <span>-</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    name="dob-year"
+                    placeholder="AAAA"
+                    value={formData.dob ? formData.dob.split('-')[0] : ''}
+                    onChange={(e) => {
+                      const year = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      const parts = formData.dob ? formData.dob.split('-') : ['', '', ''];
+                      parts[0] = year;
+                      setFormData({ ...formData, dob: parts.join('-') });
+                    }}
+                  />
+                </div>
+              ) : (
+                <input
+                  type="date"
+                  id="dob"
+                  name="dob"
+                  value={formData.dob}
+                  onChange={handleInputChange}
+                  required
+                  max={todayStr}
+                  ref={dateInputRef}
+                />
+              )}
             </div>
             <div className="form-group select-wrapper">
               <label htmlFor="gender">{t('form.genderLabel')}</label>
