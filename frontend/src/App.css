@@ -208,7 +208,7 @@ main {
 .form-group select:focus {
   outline: 0;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, .3);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 input[type=date]::-webkit-calendar-picker-indicator {
@@ -306,6 +306,9 @@ button:focus-visible {
   animation: fadeIn 1.5s ease-in-out;
   flex-grow: 1;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
 }
 
 .stats {
@@ -519,6 +522,19 @@ footer {
     max-height: none;
   }
 
+  /* Boost perceived size of the grid on small screens */
+  .life-grid-svg {
+    transform: scale(1.2);
+    transform-origin: top left;
+  }
+
+  /* Slight stroke to enhance dot contrast on mobile */
+  circle.dot {
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 0.6;
+  }
+  circle.dot.current { stroke-width: 1.4; }
+
   header h1 {
     font-size: clamp(1.8rem, 9vw, 2.4rem);
   }
@@ -567,4 +583,12 @@ footer {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+@media (max-width: 420px) {
+  .life-grid-svg {
+    transform: scale(1.35);
+    transform-origin: top left;
+  }
+  .stats { font-size: 1.1rem; }
 }
