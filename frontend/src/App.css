@@ -591,3 +591,50 @@ footer {
   circle.dot.current { transform: scale(1.8); }
   .stats { font-size: 1.1rem; }
 }
+
+/* Date segmentée JJ‑MM‑AAAA pour mobile */
+.dob-segmented {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.dob-segmented span {
+  color: var(--muted-color);
+  user-select: none;
+}
+
+.dob-segmented input {
+  width: 4.2ch;                 /* JJ / MM */
+  padding: 0.6rem 0.75rem;
+  text-align: center;
+  background: var(--bg-color);
+  border: 1px solid var(--secondary-color);
+  color: var(--text-color);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 1.05rem;
+  transition: border-color .2s, box-shadow .2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dob-segmented input[name="dob-year"] {
+  width: 7.2ch;                 /* AAAA */
+}
+
+.dob-segmented input::placeholder {
+  color: #777;
+}
+
+.dob-segmented input:focus {
+  outline: 0;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Très petits écrans */
+@media (max-width: 420px) {
+  .dob-segmented { gap: .4rem; }
+  .dob-segmented input { font-size: 1rem; padding: 0.55rem 0.7rem; }
+}
