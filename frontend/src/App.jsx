@@ -11,21 +11,17 @@ const LOCAL_STORAGE_KEY = 'momentoMoriData';
 
 function App() {
   const { t } = useTranslation();
-  
+
   // MODIFIED: Added customLifeExpectancy to the state
-  const [formData, setFormData] = useState({ 
-    dob: '', 
-    gender: 'homme', 
-    customLifeExpectancy: 80 
+  const [formData, setFormData] = useState({
+    dob: '',
+    gender: 'homme',
+    customLifeExpectancy: 80
   });
-  
+
   const [lifeData, setLifeData] = useState(null);
   const [error, setError] = useState('');
 
-  // UI preferences (language, theme, accent)
-  const [language, setLangState] = useState(getCurrentLanguage());
-  const [theme, setTheme] = useState(getThemePreference());
-  const [accent, setAccent] = useState(getAccentPreference());
 
   // Helpers
   const getTodayLocalDateString = () => {
@@ -90,14 +86,9 @@ function App() {
       // Ignore malformed localStorage content
       console.warn('Failed to read saved data:', e);
     }
-    // Apply saved UI prefs
-    try {
-      document.documentElement.setAttribute('data-theme', theme);
-      document.documentElement.setAttribute('data-accent', accent);
-      setLanguage(language);
-    } catch (e) {
-      console.warn('Failed to apply UI prefs:', e);
-    }
+    // Hardcode theme and accent
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.setAttribute('data-accent', 'teal');
   }, []);
 
   // When switching to custom gender, focus the custom expectancy field
@@ -110,15 +101,6 @@ function App() {
     }
   }, [formData.gender]);
 
-  // Persist/apply theme changes
-  useEffect(() => {
-    setThemePreference(theme);
-  }, [theme]);
-
-  // Persist/apply accent changes
-  useEffect(() => {
-    setAccentPreference(accent);
-  }, [accent]);
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
@@ -133,22 +115,6 @@ function App() {
     setFormData({ ...formData, [name]: value });
   };
 
-  // UI controls handlers
-  const onChangeLang = (e) => {
-    const lng = e.target.value;
-    setLangState(lng);
-    setLanguage(lng);
-  };
-
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-  };
-
-  const onChangeAccent = (e) => {
-    const val = e.target.value;
-    setAccent(val);
-  };
 
   const calculateWeeks = (e, savedFormData = null) => {
     if (e) e.preventDefault();
@@ -222,27 +188,7 @@ function App() {
           <p className="subtitle">{t('subtitle')}</p>
         </div>
         <div className="toolbar">
-          <div className="control">
-            <label htmlFor="lang-select" className="visually-hidden">Langue</label>
-            <select id="lang-select" value={language} onChange={onChangeLang}>
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="it">Italiano</option>
-              <option value="de">Deutsch</option>
-            </select>
-          </div>
-          <div className="control">
-            <label htmlFor="accent-select" className="visually-hidden">Accent</label>
-            <select id="accent-select" value={accent} onChange={onChangeAccent}>
-              <option value="amber">Amber</option>
-              <option value="teal">Teal</option>
-              <option value="indigo">Indigo</option>
-            </select>
-          </div>
-          <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}>
-            {theme === 'dark' ? '☾ ' + (t('theme.dark', { defaultValue: 'Sombre' })) : '☀︎ ' + (t('theme.light', { defaultValue: 'Clair' }))}
-          </button>
+          {/* Language and accent controls, and theme toggle removed */}
         </div>
       </header>
 
@@ -287,7 +233,7 @@ function App() {
                 />
               </div>
             )}
-            
+
             {error && (
               <p className="error-message" role="alert" aria-live="polite">{error}</p>
             )}
@@ -295,8 +241,8 @@ function App() {
           </form>
         ) : (
           <>
-            <LifeGrid 
-              totalWeeks={lifeData.totalWeeks} 
+            <LifeGrid
+              totalWeeks={lifeData.totalWeeks}
               pastWeeks={lifeData.pastWeeks}
               birthDate={lifeData.birthDate}
             />
@@ -304,7 +250,7 @@ function App() {
           </>
         )}
       </main>
-      
+
       <footer>
         <p>{t('footer')}</p>
       </footer>
