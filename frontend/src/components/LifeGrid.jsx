@@ -21,14 +21,25 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
   const useSplitLayout = totalRows > YEARS_THRESHOLD_FOR_SPLIT;
   
   let svgWidth, svgHeight, viewBox;
+  // These will be set only when split layout is used
+  let splitIndex = null; // number of weeks in the left block (floor(totalWeeks/2))
+  let blockWidth = null;
+  let bigGapBetweenBlocks = null;
 
   if (useSplitLayout) {
-    // Two-column layout calculations
-    const yearsPerBlock = Math.ceil(totalRows / 2);
-    const blockWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
-    const bigGapBetweenBlocks = DOT_DIAMETER_WITH_GAP * 4;
+    // Two-column layout based on HALF OF THE WEEKS, not rows
+    splitIndex = Math.floor(totalWeeks / 2);
+    const leftBlockWeeks = splitIndex;
+    const rightBlockWeeks = totalWeeks - splitIndex;
+
+    const leftRows = Math.ceil(leftBlockWeeks / WEEKS_PER_ROW);
+    const rightRows = Math.ceil(rightBlockWeeks / WEEKS_PER_ROW);
+
+    blockWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
+    bigGapBetweenBlocks = DOT_DIAMETER_WITH_GAP * 4;
+
     svgWidth = (blockWidth * 2) + bigGapBetweenBlocks;
-    svgHeight = yearsPerBlock * DOT_DIAMETER_WITH_GAP - GAP;
+    svgHeight = Math.max(leftRows, rightRows) * DOT_DIAMETER_WITH_GAP - GAP;
   } else {
     // Single-column layout calculations
     svgWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
@@ -59,14 +70,16 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
           const currentYear = Math.floor(weekIndex / WEEKS_PER_ROW);
 
           if (useSplitLayout) {
-            const yearsPerBlock = Math.ceil(totalRows / 2);
-            const blockWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
-            const bigGapBetweenBlocks = DOT_DIAMETER_WITH_GAP * 4;
-            if (currentYear < yearsPerBlock) {
-              row = currentYear; col = weekIndex % WEEKS_PER_ROW; cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
-            } else {
-              row = currentYear - yearsPerBlock; col = weekIndex % WEEKS_PER_ROW; cx = (col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS) + blockWidth + bigGapBetweenBlocks;
-            }
+            // Place the first half of weeks entirely in the left block, the rest in the right block
+            const leftWeeks = splitIndex !== null ? splitIndex : Math.floor(totalWeeks / 2);
+            const isRight = weekIndex >= leftWeeks;
+            const blockIndex = isRight ? (weekIndex - leftWeeks) : weekIndex;
+
+            row = Math.floor(blockIndex / WEEKS_PER_ROW);
+            col = blockIndex % WEEKS_PER_ROW;
+
+            const xOffset = isRight ? (blockWidth + bigGapBetweenBlocks) : 0;
+            cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS + xOffset;
             cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
           } else {
             row = currentYear; col = weekIndex % WEEKS_PER_ROW; cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS; cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
