@@ -1,16 +1,25 @@
 /* frontend/src/sw.js */
 /* eslint-disable no-undef */
-import { precacheAndRoute } from "workbox-precaching";
+import { precacheAndRoute, matchPrecache } from "workbox-precaching";
+import { registerRoute, NavigationRoute } from "workbox-routing";
 
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-self.addEventListener("install", (event) => {
-  self.skipWaiting && self.skipWaiting();
-});
-
+// Prise de contrôle immédiate du SW
+self.addEventListener("install", () => self.skipWaiting && self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
+
+// Fallback de navigation : renvoie index.html du precache quand le réseau est indisponible
+const navigationHandler = async () => {
+  return await matchPrecache("/index.html");
+};
+const navRoute = new NavigationRoute(navigationHandler, {
+  // Ne pas intercepter les appels API ni les assets fingerprintés
+  denylist: [/^\/api\//, /\/assets\//],
+});
+registerRoute(navRoute);
 
 self.addEventListener("push", (event) => {
   try {

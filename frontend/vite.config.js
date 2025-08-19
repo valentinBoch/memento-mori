@@ -21,6 +21,10 @@ export default defineConfig({
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
       },
+      workbox: {
+        navigateFallback: "/index.html",
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+      },
       // utile en dev uniquement
       devOptions: {
         enabled: true,
