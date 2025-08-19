@@ -33,15 +33,30 @@ app.use((req, _res, next) => {
   next();
 });
 
-app.options("/api/*", (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-  );
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Max-Age", "600");
-  return res.sendStatus(204);
+// -------------------- API logger + preflight (diag) --------------------
+app.use((req, _res, next) => {
+  if (req.path && req.path.startsWith("/api")) {
+    console.log("[API]", req.method, req.path);
+  }
+  next();
+});
+
+// Preflight CORS pour toutes les routes /api (compatible express 4/5)
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS" && req.path && req.path.startsWith("/api")) {
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+    res.setHeader("Access-Control-Max-Age", "600");
+    return res.sendStatus(204);
+  }
+  next();
 });
 
 // -------------------- Web Push setup --------------------
