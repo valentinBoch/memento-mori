@@ -1,15 +1,20 @@
-// backend/server.js
+// backend/server.js (ESM)
+import "dotenv/config";
+import express from "express";
+import path from "path";
+import fs from "fs";
+import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
+import morgan from "morgan";
+import webPush from "web-push";
+import cron from "node-cron";
+import { fileURLToPath } from "url";
 import { QUOTES } from "./quotes.js";
-require("dotenv").config();
-const express = require("express");
-const path = require("path");
-const fs = require("fs");
-const cors = require("cors");
-const helmet = require("helmet");
-const compression = require("compression");
-const morgan = require("morgan");
-const webPush = require("web-push");
-const cron = require("node-cron");
+
+// __dirname / __filename en ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -107,14 +112,13 @@ function computeLifePercentageRemaining({ dob, gender, customLifeExpectancy }) {
   return Math.round(pct * 10) / 10; // une décimale
 }
 
+// Quotes
 function pickQuote() {
   return QUOTES[Math.floor(Math.random() * QUOTES.length)];
 }
 
-// payload personnalisé (+ option test/override)
-function buildPersonalizedPayload(sub, opts = {}) {
-  const { test = false, override = null } = opts;
-
+// payload personnalisé (+ option override manuel)
+function buildPersonalizedPayload(sub, override = null) {
   if (override && (override.title || override.body || override.url)) {
     return JSON.stringify({
       title: override.title || "Memento Mori",
@@ -122,13 +126,11 @@ function buildPersonalizedPayload(sub, opts = {}) {
       url: override.url || "/",
     });
   }
-
   const pct = sub.prefs ? computeLifePercentageRemaining(sub.prefs) : null;
   const quote = pickQuote();
   const body =
     pct != null ? `Vie restante: ${pct}% — ${quote}` : `Rappelle-toi: ${quote}`;
-  const title = test ? "Memento Mori (test)" : "Memento Mori";
-  return JSON.stringify({ title, body, url: "/" });
+  return JSON.stringify({ title: "Memento Mori", body, url: "/" });
 }
 
 // ---------- Logging notifications ----------
@@ -225,7 +227,7 @@ app.delete("/api/push/unsubscribe", (req, res) => {
 });
 
 // Test (all or targeted). Body: { endpoint?, title?, body?, url? }
-// Par défaut : payload personnalisé (avec % de vie restante). Si title/body/url fournis -> override.
+// -> Par défaut : même payload que 09h (personnalisé). Si title/body/url fournis -> override manuel.
 app.post("/api/push/test", async (req, res) => {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
     return res.status(400).json({ error: "VAPID keys not configured" });
@@ -238,11 +240,10 @@ app.post("/api/push/test", async (req, res) => {
 
   let sent = 0;
   for (const s of targets) {
-    // Personalized by default, but allow override
-    const payload = buildPersonalizedPayload(s, {
-      test: true,
-      override: title || body || url ? { title, body, url } : null,
-    });
+    const payload = buildPersonalizedPayload(
+      s,
+      title || body || url ? { title, body, url } : null
+    );
     try {
       await webPush.sendNotification(s.subscription, payload);
       logNotification(s.endpoint, payload, "test");
@@ -352,11 +353,6 @@ app.use((err, _req, res, next) => {
 /* eslint-enable no-unused-vars */
 
 // ---------- Scheduler (09:00 locales par abonné, 1 fois/jour) ----------
-/**
- * - Tâche chaque minute.
- * - Pour chaque abonné : on calcule son heure locale (tz stockée, défaut Europe/Paris).
- * - Si 09:00 et pas encore envoyé aujourd'hui (clé "fr-FR" JJ/MM/AAAA) -> envoi.
- */
 cron.schedule("* * * * *", async () => {
   try {
     if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
