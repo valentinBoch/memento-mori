@@ -64,7 +64,9 @@ function readSubscriptions() {
 }
 function writeSubscriptions(list) {
   try {
-    fs.writeFileSync(SUBS_FILE, JSON.stringify(list, null, 2));
+    const tmp = SUBS_FILE + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(list, null, 2));
+    fs.renameSync(tmp, SUBS_FILE);
   } catch (e) {
     console.error("Failed to write subscriptions.json:", e);
   }
@@ -72,8 +74,32 @@ function writeSubscriptions(list) {
 function upsertSubscription(doc) {
   const list = readSubscriptions();
   const idx = list.findIndex((s) => s.endpoint === doc.endpoint);
-  if (idx >= 0) list[idx] = { ...list[idx], ...doc };
-  else list.push(doc);
+  if (idx >= 0) {
+    const prev = list[idx];
+    const merged = { ...prev, ...doc };
+    // Preserve prefs if incoming doc has no prefs or an empty object
+    if (
+      doc.prefs === undefined ||
+      (doc.prefs && Object.keys(doc.prefs).length === 0)
+    ) {
+      merged.prefs = prev.prefs ?? merged.prefs;
+    }
+    // Preserve createdAt if not provided
+    if (!("createdAt" in doc) && prev.createdAt)
+      merged.createdAt = prev.createdAt;
+    // Preserve lastSentDate if not provided
+    if (!("lastSentDate" in doc) && typeof prev.lastSentDate !== "undefined") {
+      merged.lastSentDate = prev.lastSentDate;
+    }
+    list[idx] = merged;
+  } else {
+    const toInsert = { ...doc };
+    if (toInsert.prefs === undefined) toInsert.prefs = {};
+    if (!("createdAt" in toInsert))
+      toInsert.createdAt = new Date().toISOString();
+    if (!("lastSentDate" in toInsert)) toInsert.lastSentDate = null;
+    list.push(toInsert);
+  }
   writeSubscriptions(list);
 }
 function removeSubscription(endpoint) {
@@ -178,9 +204,8 @@ app.post("/api/push/subscribe", (req, res) => {
     subscription: sub,
     timezone: typeof timezone === "string" ? timezone : null,
     user: user || null,
-    prefs: {}, // sera rempli via /api/push/prefs
-    createdAt: new Date().toISOString(),
-    lastSentDate: null, // "JJ/MM/AAAA"
+    // Ne pas fournir `prefs` ici pour éviter d'écraser celles existantes
+    // createdAt/lastSentDate seront définis si nécessaire dans upsertSubscription
   });
 
   return res.status(201).json({ ok: true });
