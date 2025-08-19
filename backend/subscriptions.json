@@ -1,0 +1,22 @@
+[
+  {
+    "endpoint": "https://fcm.googleapis.com/fcm/send/fVaylPmwR_g:APA91bGvTXgbWsYc6gr9K8HCR9XPSZbXf8EFKK7jkSZIjkSMLiVZwFuoWavoA7rmaJTKszptBLOcN2CdMNS-8Hz4aeE6bBIWCwVHr9BcNNVGAQBYsvZtCNhXWI9_iHhxoDJtqQcDmRMM",
+    "subscription": {
+      "endpoint": "https://fcm.googleapis.com/fcm/send/fVaylPmwR_g:APA91bGvTXgbWsYc6gr9K8HCR9XPSZbXf8EFKK7jkSZIjkSMLiVZwFuoWavoA7rmaJTKszptBLOcN2CdMNS-8Hz4aeE6bBIWCwVHr9BcNNVGAQBYsvZtCNhXWI9_iHhxoDJtqQcDmRMM",
+      "expirationTime": null,
+      "keys": {
+        "p256dh": "BNjSDUX-QLqN3pPj-5HOu3Fz66Ej45mCzwHkuyRYFY5g8zFOGD1BebM5IH03Jb79cBgxJcHrTK1DA1oNBFKxzLE",
+        "auth": "vReASVicxNc3MiAYlOj2Yg"
+      }
+    },
+    "timezone": "Europe/Paris",
+    "user": null,
+    "createdAt": "2025-08-19T08:58:29.010Z",
+    "lastSentDate": null,
+    "prefs": {
+      "dob": "1993-04-29",
+      "gender": "homme",
+      "customLifeExpectancy": 80
+    }
+  }
+]
