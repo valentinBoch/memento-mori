@@ -1,4 +1,5 @@
 // backend/server.js
+import { QUOTES } from "./quotes.js";
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
@@ -105,14 +106,7 @@ function computeLifePercentageRemaining({ dob, gender, customLifeExpectancy }) {
   const pct = Math.max(0, Math.min(100, (remaining / expectancy) * 100));
   return Math.round(pct * 10) / 10; // une décimale
 }
-const QUOTES = [
-  "Chaque jour compte.",
-  "La constance bat le talent.",
-  "Petits pas, grands effets.",
-  "Décide, puis avance.",
-  "Le meilleur moment, c'est maintenant.",
-  "Tu es plus près que tu ne le crois.",
-];
+
 function pickQuote() {
   return QUOTES[Math.floor(Math.random() * QUOTES.length)];
 }
