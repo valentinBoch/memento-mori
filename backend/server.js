@@ -25,6 +25,25 @@ app.use(helmet({ contentSecurityPolicy: false }));
 if (process.env.NODE_ENV !== "test") app.use(morgan("combined"));
 app.use(compression());
 
+// -------------------- API logger + preflight (diag) --------------------
+app.use((req, _res, next) => {
+  if (req.path && req.path.startsWith("/api")) {
+    console.log("[API]", req.method, req.path);
+  }
+  next();
+});
+
+app.options("/api/*", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Max-Age", "600");
+  return res.sendStatus(204);
+});
+
 // -------------------- Web Push setup --------------------
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:you@example.com";
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
@@ -147,35 +166,33 @@ app.get("/healthz", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-// -------------------- CORS/preflight robustness for prefs --------------------
-app.all("/api/push/prefs", (req, res, next) => {
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
-  }
-  return next();
-});
-
 // -------------------- Public VAPID key endpoint (for frontend) --------------------
-app.get("/api/push/public-key", (req, res) => {
+app.get("/api/push/public-key", (_req, res) => {
   res.json({ publicKey: VAPID_PUBLIC_KEY || "" });
 });
 
 // -------------------- Push API --------------------
 
-// Subscribe
+// (TEMP diagnostique) si le front tape GET au lieu de POST, on le voit clairement
+app.get("/api/push/subscribe", (_req, res) => {
+  res.status(405).json({ error: "Use POST for /api/push/subscribe" });
+});
+
+// Subscribe (robuste : accepte {subscription: ...} OU la subscription brute)
 app.post("/api/push/subscribe", async (req, res) => {
   try {
-    const { subscription, timezone, user } = req.body || {};
+    const subscription = req.body?.subscription || req.body;
     if (!subscription || !subscription.endpoint) {
       return res.status(400).json({ error: "Invalid subscription" });
     }
     const doc = {
       endpoint: subscription.endpoint,
       subscription,
-      timezone: typeof timezone === "string" ? timezone : null,
-      user: user || null,
+      timezone:
+        typeof req.body?.timezone === "string" ? req.body.timezone : null,
+      user: req.body?.user || null,
       createdAt: new Date().toISOString(),
-      lastSentDate: null, // track last date we sent at 09:00 in user's TZ
+      lastSentDate: null,
     };
     upsertSubscription(doc);
     return res.status(201).json({ ok: true });
@@ -272,7 +289,6 @@ app.post("/api/push/test", async (req, res) => {
 
     let sent = 0;
     for (const s of targets) {
-      // If caller did not provide body/title, compute a personalized one
       const computedPct = s.prefs
         ? computeLifePercentageRemaining(s.prefs)
         : null;
