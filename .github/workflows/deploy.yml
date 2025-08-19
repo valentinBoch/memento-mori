@@ -1,0 +1,66 @@
+name: Deploy mememto-mori to Server
+
+on:
+  push:
+    branches:
+      - main # Ou ta branche principale (ex: master)
+
+jobs:
+  deploy:
+    name: Build and Deploy Docker Image mememto-mori
+    runs-on: mememto-mori # Cible ton runner sur le serveur Ubuntu
+
+    steps:
+      # Étape 1: Récupérer le code le plus récent
+      # Utilise actions/checkout@vX qui est la méthode standard dans Actions
+      # pour obtenir le code du commit qui a déclenché le workflow.
+      # C'est plus fiable que de supposer un 'git pull' sur un état existant.
+      - name: Checkout code
+        uses: actions/checkout@v4 # Utilise une version récente de l'action
+
+      # Étape 2: Construire l'image Docker
+      # Utilise le Dockerfile présent à la racine du projet après le checkout
+      # Le tag '-t mememto-mori' nomme l'image 'mememto-mori' (la dernière version sera taggée 'latest' implicitement)
+      - name: Build Docker image
+        run: docker build -t mememto-mori .
+
+      # Étape 3: Arrêter le conteneur existant (s'il existe)
+      # '|| true' permet à l'étape de réussir même si le conteneur n'existe pas (ex: premier déploiement)
+      - name: Stop existing container
+        run: docker stop mememto-mori || true
+
+      # Étape 4: Supprimer le conteneur existant (s'il existe)
+      # Nécessaire pour pouvoir lancer un nouveau conteneur avec le même nom
+      - name: Remove existing container
+        run: docker rm mememto-mori || true
+
+      # Étape 5: Lancer le nouveau conteneur avec la nouvelle image
+      # -d : Détaché (tourne en arrière-plan)
+      # --name mememto-mori : Donne un nom au conteneur
+      # -p ... : Mappe un port de l'hôte vers un port du conteneur (À ADAPTER !)
+      # -v ... : (Optionnel) Monte des volumes pour les données persistantes (À ADAPTER !)
+      # -e ... : (Optionnel) Passe des variables d'environnement (À ADAPTER !)
+      # mememto-mori : Utilise l'image que nous venons de construire
+      - name: Start new container
+        run: |
+          docker run -d \
+            --name mememto-mori \
+            -p 5173:5173 \
+            --label com.centurylinklabs.watchtower.enable=false \
+            --restart unless-stopped \
+            mememto-mori
+
+        # Étape 6: Attendre un peu que le conteneur démarre complètement
+      - name: Wait for container startup
+        run: sleep 5
+        shell: bash # Bonne pratique de spécifier le shell
+
+      # Étape 7: Vérifier que le conteneur est bien en cours d'exécution
+      - name: Check if docker run
+        run: docker ps --filter name=mememto-mori --filter status=running --quiet | grep . || exit 1
+        shell: bash # Bonne pratique de spécifier le shell
+
+      # Étape 8: (Optionnel) Nettoyer les anciennes images Docker non utilisées
+      - name: Cleanup old images
+        if: always() # Exécute même si les étapes stop/rm ont "échoué" (|| true)
+        run: docker image prune -f
