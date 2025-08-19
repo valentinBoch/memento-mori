@@ -2,6 +2,8 @@
 /* eslint-disable no-undef */
 import { precacheAndRoute, matchPrecache } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
+import { CacheFirst } from "workbox-strategies";
+import { ExpirationPlugin } from "workbox-expiration";
 
 // Précache (injecté par vite-plugin-pwa en mode injectManifest)
 precacheAndRoute(self.__WB_MANIFEST || []);
@@ -20,6 +22,23 @@ const navRoute = new NavigationRoute(navigationHandler, {
   denylist: [/^\/api\//, /\/assets\//], // ne pas intercepter API et assets fingerprintés
 });
 registerRoute(navRoute);
+
+// Cache runtime des fichiers de traduction i18n pour l'offline
+registerRoute(
+  ({ request, url }) =>
+    request.destination !== "document" &&
+    url.pathname.startsWith("/locales/") &&
+    url.pathname.endsWith(".json"),
+  new CacheFirst({
+    cacheName: "i18n-locales",
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 60 * 60 * 24 * 30,
+      }), // 30 jours
+    ],
+  })
+);
 
 // ----- PUSH NOTIFICATIONS -----
 self.addEventListener("push", (event) => {
