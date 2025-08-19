@@ -7,7 +7,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5173;
 const HOST = process.env.HOST || "0.0.0.0";
 
 // Hardening de base
