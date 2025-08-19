@@ -3,6 +3,7 @@
 import { precacheAndRoute, matchPrecache } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
 
+// Précache (injecté par vite-plugin-pwa en mode injectManifest)
 precacheAndRoute(self.__WB_MANIFEST || []);
 
 // Prise de contrôle immédiate du SW
@@ -11,16 +12,16 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Fallback de navigation : renvoie index.html du precache quand le réseau est indisponible
+// Fallback de navigation : sert index.html depuis le precache quand offline
 const navigationHandler = async () => {
   return await matchPrecache("/index.html");
 };
 const navRoute = new NavigationRoute(navigationHandler, {
-  // Ne pas intercepter les appels API ni les assets fingerprintés
-  denylist: [/^\/api\//, /\/assets\//],
+  denylist: [/^\/api\//, /\/assets\//], // ne pas intercepter API et assets fingerprintés
 });
 registerRoute(navRoute);
 
+// ----- PUSH NOTIFICATIONS -----
 self.addEventListener("push", (event) => {
   try {
     const data = event.data ? event.data.json() : {};
@@ -64,9 +65,8 @@ self.addEventListener("notificationclick", (event) => {
             return;
           }
         }
-        if (clients.openWindow) {
-          return clients.openWindow(url);
-        }
+        if (clients.openWindow) return clients.openWindow(url);
+        return undefined;
       })
   );
 });
