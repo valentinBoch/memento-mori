@@ -8,13 +8,14 @@ const helmet = require("helmet");
 const compression = require("compression");
 const morgan = require("morgan");
 const webPush = require("web-push");
+const cron = require("node-cron");
 
 const app = express();
 
-// ---------- Base middlewares ----------
+// ---------- Middlewares ----------
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-app.use(cors()); // same-origin conseillé côté front (URLs relatives)
+app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 app.use(helmet({ contentSecurityPolicy: false }));
 if (process.env.NODE_ENV !== "test") app.use(morgan("combined"));
@@ -32,12 +33,20 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   console.warn("[web-push] VAPID keys missing. Push sending will fail.");
 }
 
-// ---------- Persistence (Option B: dossier monté) ----------
+// ---------- Persistance (Option B : dossier monté) ----------
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+} catch (e) {
+  console.warn(
+    "⚠️ Impossible de créer DATA_DIR, on compte sur le volume monté :",
+    DATA_DIR
+  );
+}
 const SUBS_FILE =
   process.env.SUBS_PATH || path.join(DATA_DIR, "subscriptions.json");
 
+// Lecture/écriture synchrone (simple et robuste ici)
 function readSubscriptions() {
   try {
     if (!fs.existsSync(SUBS_FILE)) return [];
@@ -66,50 +75,142 @@ function removeSubscription(endpoint) {
   writeSubscriptions(list.filter((s) => s.endpoint !== endpoint));
 }
 
+// ---------- Helpers domaine (pourcentage de vie, citations) ----------
+const DEFAULT_LIFE_EXPECTANCY = { homme: 80, femme: 85 };
+function safeInt(n, def) {
+  const v = parseInt(n, 10);
+  return Number.isFinite(v) ? v : def;
+}
+function yearsBetween(dob) {
+  if (!dob) return null;
+  const [y, m, d] = String(dob)
+    .split("-")
+    .map((x) => parseInt(x, 10));
+  if (!y || !m || !d) return null;
+  const birth = new Date(Date.UTC(y, m - 1, d));
+  const now = new Date();
+  const diffMs = now - birth;
+  const yearMs = 365.2425 * 24 * 60 * 60 * 1000;
+  return diffMs / yearMs;
+}
+function computeLifePercentageRemaining({ dob, gender, customLifeExpectancy }) {
+  const livedYears = yearsBetween(dob);
+  if (livedYears == null) return null;
+  let expectancy = DEFAULT_LIFE_EXPECTANCY.homme;
+  if (gender === "femme") expectancy = DEFAULT_LIFE_EXPECTANCY.femme;
+  if (gender === "custom")
+    expectancy = safeInt(customLifeExpectancy, DEFAULT_LIFE_EXPECTANCY.homme);
+  expectancy = Math.max(1, Math.min(120, expectancy));
+  const remaining = Math.max(0, expectancy - livedYears);
+  const pct = Math.max(0, Math.min(100, (remaining / expectancy) * 100));
+  return Math.round(pct * 10) / 10; // une décimale
+}
+const QUOTES = [
+  "Chaque jour compte.",
+  "La constance bat le talent.",
+  "Petits pas, grands effets.",
+  "Décide, puis avance.",
+  "Le meilleur moment, c'est maintenant.",
+  "Tu es plus près que tu ne le crois.",
+];
+function pickQuote() {
+  return QUOTES[Math.floor(Math.random() * QUOTES.length)];
+}
+
+function buildPersonalizedPayload(sub) {
+  const pct = sub.prefs ? computeLifePercentageRemaining(sub.prefs) : null;
+  const quote = pickQuote();
+  const body =
+    pct != null ? `Vie restante: ${pct}% — ${quote}` : `Rappelle-toi: ${quote}`;
+  return JSON.stringify({ title: "Memento Mori", body, url: "/" });
+}
+
+// ---------- Logging des notifications envoyées ----------
+function logNotification(endpoint, payload, source = "unknown") {
+  try {
+    const logPath = path.join(DATA_DIR, "notifications.log");
+    const shortEndpoint =
+      (endpoint || "").slice(0, 60) +
+      (endpoint && endpoint.length > 60 ? "…" : "");
+    let parsed;
+    try {
+      parsed = JSON.parse(payload);
+    } catch {
+      parsed = { raw: String(payload) };
+    }
+    const entry = {
+      ts: new Date().toISOString(),
+      endpoint: shortEndpoint,
+      source, // "test", "now", "cron"
+      payload: parsed,
+    };
+    fs.appendFileSync(logPath, JSON.stringify(entry) + "\n");
+  } catch (e) {
+    console.error("⚠️ Failed to log notification:", e);
+  }
+}
+
 // ---------- Healthcheck ----------
 app.get("/healthz", (_req, res) => res.status(200).json({ status: "ok" }));
 
-// ---------- API: Web Push ----------
+// ---------- API Push ----------
 app.get("/api/push/public-key", (_req, res) => {
   res.json({ publicKey: VAPID_PUBLIC_KEY || "" });
 });
 
+// Subscribe (POST JSON: { subscription, timezone, user? })
 app.post("/api/push/subscribe", (req, res) => {
-  const subscription = req.body?.subscription || req.body;
-  const timezone = req.body?.timezone || null;
-  if (!subscription || !subscription.endpoint) {
+  const { subscription, timezone, user } = req.body || {};
+  const sub = subscription || req.body; // compat "brute" si on envoie directement l'objet subscription
+  if (!sub || !sub.endpoint)
     return res.status(400).json({ error: "Invalid subscription" });
-  }
+
   upsertSubscription({
-    endpoint: subscription.endpoint,
-    subscription,
-    timezone,
+    endpoint: sub.endpoint,
+    subscription: sub,
+    timezone: typeof timezone === "string" ? timezone : null,
+    user: user || null,
+    prefs: {}, // sera rempli via /api/push/prefs
     createdAt: new Date().toISOString(),
+    lastSentDate: null, // clé jour "fr-FR" (JJ/MM/AAAA) pour dédup
   });
+
   return res.status(201).json({ ok: true });
 });
 
+// Update prefs (PUT JSON: { endpoint, dob, gender, customLifeExpectancy, timezone? })
 app.put("/api/push/prefs", (req, res) => {
   const { endpoint, dob, gender, customLifeExpectancy, timezone } =
     req.body || {};
   if (!endpoint) return res.status(400).json({ error: "endpoint required" });
+
   const list = readSubscriptions();
   const idx = list.findIndex((s) => s.endpoint === endpoint);
   if (idx < 0) return res.status(404).json({ error: "subscription not found" });
+
   list[idx].prefs = {
     dob: typeof dob === "string" ? dob : list[idx].prefs?.dob || null,
     gender: ["homme", "femme", "custom"].includes(gender)
       ? gender
       : list[idx].prefs?.gender || "homme",
-    customLifeExpectancy: Number.isFinite(parseInt(customLifeExpectancy, 10))
-      ? parseInt(customLifeExpectancy, 10)
-      : list[idx].prefs?.customLifeExpectancy || 80,
+    customLifeExpectancy: safeInt(
+      customLifeExpectancy,
+      list[idx].prefs?.customLifeExpectancy || DEFAULT_LIFE_EXPECTANCY.homme
+    ),
   };
   if (typeof timezone === "string") list[idx].timezone = timezone;
+
   writeSubscriptions(list);
   return res.json({ ok: true });
 });
 
+// Compat: POST /api/push/prefs -> redirige vers PUT handler
+app.post("/api/push/prefs", (req, res) => {
+  req.method = "PUT";
+  return app._router.handle(req, res);
+});
+
+// Unsubscribe
 app.delete("/api/push/unsubscribe", (req, res) => {
   const { endpoint } = req.body || {};
   if (!endpoint) return res.status(400).json({ error: "endpoint required" });
@@ -117,47 +218,92 @@ app.delete("/api/push/unsubscribe", (req, res) => {
   return res.json({ ok: true });
 });
 
-app.post("/api/push/test", async (_req, res) => {
+// Test (all or targeted). Body: { endpoint?, title?, body?, url? }
+app.post("/api/push/test", async (req, res) => {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
     return res.status(400).json({ error: "VAPID keys not configured" });
   }
+  const { endpoint, title, body, url } = req.body || {};
   const list = readSubscriptions();
-  if (!list.length)
+  const targets = endpoint ? list.filter((s) => s.endpoint === endpoint) : list;
+  if (!targets.length)
     return res.status(404).json({ error: "No subscription found" });
 
-  const payload = JSON.stringify({
-    title: "Memento Mori",
-    body: "Ceci est une notification de test 🚀",
-    url: "/",
-  });
-
   let sent = 0;
-  for (const s of list) {
+  for (const s of targets) {
+    const payload =
+      title || body || url
+        ? JSON.stringify({
+            title: title || "Memento Mori",
+            body: body || "Test",
+            url: url || "/",
+          })
+        : buildPersonalizedPayload(s);
     try {
       await webPush.sendNotification(s.subscription, payload);
+      logNotification(s.endpoint, payload, "test");
       sent++;
     } catch (e) {
-      const code = e?.statusCode || e?.code;
-      console.warn("Send failed, removing subscription:", code);
+      console.warn(
+        "test send failed -> removing sub:",
+        e?.statusCode || e?.code
+      );
       removeSubscription(s.endpoint);
     }
   }
   return res.json({ ok: true, sent });
 });
 
-// ---------- API 404 guard (avant le statique) ----------
+// Send now (immediate, personalized). GET ?endpoint=... or POST { endpoint }
+app.get("/api/push/now", async (req, res) => {
+  try {
+    const endpoint = req.query.endpoint;
+    const list = readSubscriptions();
+    const targets = endpoint
+      ? list.filter((s) => s.endpoint === endpoint)
+      : list;
+    if (!targets.length)
+      return res.status(404).json({ error: "No subscription found" });
+
+    let sent = 0;
+    for (const s of targets) {
+      const payload = buildPersonalizedPayload(s);
+      try {
+        await webPush.sendNotification(s.subscription, payload);
+        logNotification(s.endpoint, payload, "now");
+        sent++;
+      } catch (e) {
+        console.warn(
+          "push/now failed -> removing sub:",
+          e?.statusCode || e?.code
+        );
+        removeSubscription(s.endpoint);
+      }
+    }
+    return res.json({ ok: true, sent });
+  } catch (e) {
+    console.error("/api/push/now error:", e);
+    return res.status(500).json({ error: "Internal" });
+  }
+});
+app.post("/api/push/now", async (req, res) => {
+  req.query = req.query || {};
+  if (req.body?.endpoint) req.query.endpoint = req.body.endpoint;
+  return app._router.handle(req, res);
+});
+
+// ---------- API 404 guard ----------
 app.use((req, res, next) => {
-  if (req.path && req.path.startsWith("/api/")) {
+  if (req.path && req.path.startsWith("/api")) {
     return res.status(404).json({ error: "Not Found" });
   }
   next();
 });
 
-// ---------- Static frontend (Vite build) ----------
+// ---------- Statique frontend (Vite build) ----------
 const buildPath = path.join(__dirname, "..", "frontend", "dist");
 const assetsPath = path.join(buildPath, "assets");
 
-// /assets -> cache long
 app.use(
   "/assets",
   express.static(assetsPath, {
@@ -167,8 +313,6 @@ app.use(
     etag: true,
   })
 );
-
-// reste du build -> cache court
 app.use(
   express.static(buildPath, {
     index: false,
@@ -177,11 +321,12 @@ app.use(
   })
 );
 
-// Fallback SPA: servir index.html pour toute requête GET non-API qui accepte du HTML
+// Fallback SPA : index.html pour toute requête GET non-API qui accepte du HTML
 app.use((req, res, next) => {
   const isGet = req.method === "GET";
-  const isApi = req.path && req.path.startsWith("/api/");
-  const acceptsHtml = req.headers?.accept?.includes("text/html");
+  const isApi = req.path && req.path.startsWith("/api");
+  const acceptsHtml =
+    req.headers.accept && req.headers.accept.includes("text/html");
   if (isGet && !isApi && acceptsHtml) {
     const indexFile = path.join(buildPath, "index.html");
     res.setHeader("Cache-Control", "no-store");
@@ -202,74 +347,62 @@ app.use((err, _req, res, next) => {
 });
 /* eslint-enable no-unused-vars */
 
-// ---------- Start ----------
-const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || "0.0.0.0";
-// ---------- Scheduler: envoi quotidien à 09:00 local par abonnement ----------
+// ---------- Scheduler (09:00 locales par abonné, 1 fois/jour) ----------
 /**
- * Règle de fonctionnement :
- * - Le job s’exécute chaque minute.
- * - Pour chaque subscription, on calcule l’heure locale (son fuseau s.timezone, défaut "Europe/Paris").
- * - Si c’est 09:00 et qu’on n’a pas encore envoyé aujourd’hui (s.lastSentDate !== "JJ/MM/AAAA"), on envoie.
- * - On mémorise la date du dernier envoi dans le fichier de persistance.
+ * - Tâche chaque minute.
+ * - Pour chaque abonné : on calcule son heure locale (tz stockée, défaut Europe/Paris).
+ * - Si 09:00 et pas encore envoyé aujourd'hui (clé "fr-FR" JJ/MM/AAAA) -> envoi.
  */
 cron.schedule("* * * * *", async () => {
   try {
-    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return; // pas de clés -> pas d’envoi
-
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
     const list = readSubscriptions();
     if (!list.length) return;
 
     const nowUtc = new Date();
-    let updated = false;
+    let changed = false;
 
     for (const s of list) {
       const tz = s.timezone || "Europe/Paris";
-
-      // Chaine du style "19/08/2025, 09:00:00"
-      const localStr = nowUtc.toLocaleString("fr-FR", {
+      const datePart = nowUtc.toLocaleDateString("fr-FR", { timeZone: tz }); // "19/08/2025"
+      const timePart = nowUtc.toLocaleTimeString("fr-FR", {
         timeZone: tz,
         hour12: false,
-      });
-      const [datePart, timePart] = localStr.split(", ");
+      }); // "09:00:00"
       const [hh, mm] = timePart.split(":");
-
-      // Clé de jour locale (JJ/MM/AAAA)
       const todayKey = datePart;
 
-      // Envoi à 09:00 uniquement si pas encore envoyé pour ce "jour local"
       if (hh === "09" && mm === "00" && s.lastSentDate !== todayKey) {
-        const payload = JSON.stringify({
-          title: "Memento Mori",
-          body: "Rappelle-toi. Chaque jour compte.",
-          url: "/",
-        });
-
         try {
+          const payload = buildPersonalizedPayload(s);
           await webPush.sendNotification(s.subscription, payload);
+          logNotification(s.endpoint, payload, "cron");
           s.lastSentDate = todayKey;
-          updated = true;
+          changed = true;
         } catch (err) {
-          // Si l’abonnement est invalide (410 Gone, etc.) on le supprime
           console.warn(
-            "Push send failed, removing subscription:",
+            "cron send failed -> removing sub:",
             err?.statusCode || err?.code
           );
           const idx = list.findIndex((x) => x.endpoint === s.endpoint);
           if (idx >= 0) {
             list.splice(idx, 1);
-            updated = true;
+            changed = true;
           }
         }
       }
     }
-
-    if (updated) writeSubscriptions(list);
+    if (changed) writeSubscriptions(list);
   } catch (e) {
     console.error("cron error:", e);
   }
 });
+
+// ---------- Start ----------
+const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || "0.0.0.0";
 app.listen(PORT, HOST, () => {
   console.log(`✅ Server running on http://${HOST}:${PORT}`);
   console.log(`📁 Subscriptions file: ${SUBS_FILE}`);
+  console.log(`📂 Data dir: ${DATA_DIR}`);
 });
