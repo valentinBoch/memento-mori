@@ -27,7 +27,7 @@ app.use(helmet({ contentSecurityPolicy: false }));
 if (process.env.NODE_ENV !== "test") app.use(morgan("combined"));
 
 app.use(compression());
-app.options("*", cors());
+app.options(/.*/, cors());
 
 // ---------- VAPID ----------
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:example@example.com";
