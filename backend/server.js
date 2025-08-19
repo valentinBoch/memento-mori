@@ -46,7 +46,7 @@ try {
 const SUBS_FILE =
   process.env.SUBS_PATH || path.join(DATA_DIR, "subscriptions.json");
 
-// Lecture/écriture synchrone (simple et robuste ici)
+// Lecture/écriture synchrone
 function readSubscriptions() {
   try {
     if (!fs.existsSync(SUBS_FILE)) return [];
@@ -75,7 +75,7 @@ function removeSubscription(endpoint) {
   writeSubscriptions(list.filter((s) => s.endpoint !== endpoint));
 }
 
-// ---------- Helpers domaine (pourcentage de vie, citations) ----------
+// ---------- Helpers domaine ----------
 const DEFAULT_LIFE_EXPECTANCY = { homme: 80, femme: 85 };
 function safeInt(n, def) {
   const v = parseInt(n, 10);
@@ -117,15 +117,27 @@ function pickQuote() {
   return QUOTES[Math.floor(Math.random() * QUOTES.length)];
 }
 
-function buildPersonalizedPayload(sub) {
+// payload personnalisé (+ option test/override)
+function buildPersonalizedPayload(sub, opts = {}) {
+  const { test = false, override = null } = opts;
+
+  if (override && (override.title || override.body || override.url)) {
+    return JSON.stringify({
+      title: override.title || "Memento Mori",
+      body: override.body || "Rappel",
+      url: override.url || "/",
+    });
+  }
+
   const pct = sub.prefs ? computeLifePercentageRemaining(sub.prefs) : null;
   const quote = pickQuote();
   const body =
     pct != null ? `Vie restante: ${pct}% — ${quote}` : `Rappelle-toi: ${quote}`;
-  return JSON.stringify({ title: "Memento Mori", body, url: "/" });
+  const title = test ? "Memento Mori (test)" : "Memento Mori";
+  return JSON.stringify({ title, body, url: "/" });
 }
 
-// ---------- Logging des notifications envoyées ----------
+// ---------- Logging notifications ----------
 function logNotification(endpoint, payload, source = "unknown") {
   try {
     const logPath = path.join(DATA_DIR, "notifications.log");
@@ -161,7 +173,7 @@ app.get("/api/push/public-key", (_req, res) => {
 // Subscribe (POST JSON: { subscription, timezone, user? })
 app.post("/api/push/subscribe", (req, res) => {
   const { subscription, timezone, user } = req.body || {};
-  const sub = subscription || req.body; // compat "brute" si on envoie directement l'objet subscription
+  const sub = subscription || req.body; // compat si on envoie directement l'objet subscription
   if (!sub || !sub.endpoint)
     return res.status(400).json({ error: "Invalid subscription" });
 
@@ -172,7 +184,7 @@ app.post("/api/push/subscribe", (req, res) => {
     user: user || null,
     prefs: {}, // sera rempli via /api/push/prefs
     createdAt: new Date().toISOString(),
-    lastSentDate: null, // clé jour "fr-FR" (JJ/MM/AAAA) pour dédup
+    lastSentDate: null, // "JJ/MM/AAAA"
   });
 
   return res.status(201).json({ ok: true });
@@ -219,6 +231,7 @@ app.delete("/api/push/unsubscribe", (req, res) => {
 });
 
 // Test (all or targeted). Body: { endpoint?, title?, body?, url? }
+// Par défaut : payload personnalisé (avec % de vie restante). Si title/body/url fournis -> override.
 app.post("/api/push/test", async (req, res) => {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
     return res.status(400).json({ error: "VAPID keys not configured" });
@@ -231,14 +244,11 @@ app.post("/api/push/test", async (req, res) => {
 
   let sent = 0;
   for (const s of targets) {
-    const payload =
-      title || body || url
-        ? JSON.stringify({
-            title: title || "Memento Mori",
-            body: body || "Test",
-            url: url || "/",
-          })
-        : buildPersonalizedPayload(s);
+    // Personalized by default, but allow override
+    const payload = buildPersonalizedPayload(s, {
+      test: true,
+      override: title || body || url ? { title, body, url } : null,
+    });
     try {
       await webPush.sendNotification(s.subscription, payload);
       logNotification(s.endpoint, payload, "test");
