@@ -3,64 +3,52 @@ name: Deploy memento-mori to Server
 on:
   push:
     branches:
-      - main # Ou ta branche principale (ex: master)
+      - main
 
 jobs:
   deploy:
     name: Build and Deploy Docker Image memento-mori
-    runs-on: memento-mori # Cible ton runner sur le serveur Ubuntu
+    runs-on: memento-mori # ton runner self-hosted sur le serveur Ubuntu
 
     steps:
-      # Étape 1: Récupérer le code le plus récent
-      # Utilise actions/checkout@vX qui est la méthode standard dans Actions
-      # pour obtenir le code du commit qui a déclenché le workflow.
-      # C'est plus fiable que de supposer un 'git pull' sur un état existant.
       - name: Checkout code
-        uses: actions/checkout@v4 # Utilise une version récente de l'action
+        uses: actions/checkout@v4
 
-      # Étape 2: Construire l'image Docker
-      # Utilise le Dockerfile présent à la racine du projet après le checkout
-      # Le tag '-t memento-mori' nomme l'image 'memento-mori' (la dernière version sera taggée 'latest' implicitement)
       - name: Build Docker image
         run: docker build -t memento-mori .
 
-      # Étape 3: Arrêter le conteneur existant (s'il existe)
-      # '|| true' permet à l'étape de réussir même si le conteneur n'existe pas (ex: premier déploiement)
       - name: Stop existing container
         run: docker stop memento-mori || true
 
-      # Étape 4: Supprimer le conteneur existant (s'il existe)
-      # Nécessaire pour pouvoir lancer un nouveau conteneur avec le même nom
       - name: Remove existing container
         run: docker rm memento-mori || true
 
-      # Étape 5: Lancer le nouveau conteneur avec la nouvelle image
-      # -d : Détaché (tourne en arrière-plan)
-      # --name memento-mori : Donne un nom au conteneur
-      # -p ... : Mappe un port de l'hôte vers un port du conteneur
-      # -v ... : (Optionnel) Monte des volumes pour les données persistantes
-      # -e ... : (Optionnel) Passe des variables d'environnement
-      # memento-mori : Utilise l'image que nous venons de construire
+      - name: Create .env file from GitHub secrets
+        run: |
+          echo "VAPID_SUBJECT=${{ secrets.VAPID_SUBJECT }}" >> .env
+          echo "VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }}" >> .env
+          echo "VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }}" >> .env
+          echo "PORT=3001" >> .env
+          echo "HOST=0.0.0.0" >> .env
+
       - name: Start new container
         run: |
           docker run -d \
             --name memento-mori \
+            --env-file .env \
             -p 5173:5173 \
             --label com.centurylinklabs.watchtower.enable=false \
             --restart unless-stopped \
             memento-mori
 
-        # Étape 6: Attendre un peu que le conteneur démarre complètement
       - name: Wait for container startup
         run: sleep 5
-        shell: bash # Bonne pratique de spécifier le shell
+        shell: bash
 
-      # Étape 7: Vérifier que le conteneur est bien en cours d'exécution
       - name: Check if docker run
         run: docker ps --filter name=memento-mori --filter status=running --quiet | grep . || exit 1
-        shell: bash # Bonne pratique de spécifier le shell
+        shell: bash
 
-      # Étape 8: (Optionnel) Nettoyer les anciennes images Docker non utilisées
       - name: Cleanup old images
-        if: always() # Exécute même si les étapes stop/rm ont "échoué" (|| true)
+        if: always()
         run: docker image prune -f
