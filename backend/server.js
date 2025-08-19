@@ -205,6 +205,70 @@ app.use((err, _req, res, next) => {
 // ---------- Start ----------
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || "0.0.0.0";
+// ---------- Scheduler: envoi quotidien à 09:00 local par abonnement ----------
+/**
+ * Règle de fonctionnement :
+ * - Le job s’exécute chaque minute.
+ * - Pour chaque subscription, on calcule l’heure locale (son fuseau s.timezone, défaut "Europe/Paris").
+ * - Si c’est 09:00 et qu’on n’a pas encore envoyé aujourd’hui (s.lastSentDate !== "JJ/MM/AAAA"), on envoie.
+ * - On mémorise la date du dernier envoi dans le fichier de persistance.
+ */
+cron.schedule("* * * * *", async () => {
+  try {
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return; // pas de clés -> pas d’envoi
+
+    const list = readSubscriptions();
+    if (!list.length) return;
+
+    const nowUtc = new Date();
+    let updated = false;
+
+    for (const s of list) {
+      const tz = s.timezone || "Europe/Paris";
+
+      // Chaine du style "19/08/2025, 09:00:00"
+      const localStr = nowUtc.toLocaleString("fr-FR", {
+        timeZone: tz,
+        hour12: false,
+      });
+      const [datePart, timePart] = localStr.split(", ");
+      const [hh, mm] = timePart.split(":");
+
+      // Clé de jour locale (JJ/MM/AAAA)
+      const todayKey = datePart;
+
+      // Envoi à 09:00 uniquement si pas encore envoyé pour ce "jour local"
+      if (hh === "09" && mm === "00" && s.lastSentDate !== todayKey) {
+        const payload = JSON.stringify({
+          title: "Memento Mori",
+          body: "Rappelle-toi. Chaque jour compte.",
+          url: "/",
+        });
+
+        try {
+          await webPush.sendNotification(s.subscription, payload);
+          s.lastSentDate = todayKey;
+          updated = true;
+        } catch (err) {
+          // Si l’abonnement est invalide (410 Gone, etc.) on le supprime
+          console.warn(
+            "Push send failed, removing subscription:",
+            err?.statusCode || err?.code
+          );
+          const idx = list.findIndex((x) => x.endpoint === s.endpoint);
+          if (idx >= 0) {
+            list.splice(idx, 1);
+            updated = true;
+          }
+        }
+      }
+    }
+
+    if (updated) writeSubscriptions(list);
+  } catch (e) {
+    console.error("cron error:", e);
+  }
+});
 app.listen(PORT, HOST, () => {
   console.log(`✅ Server running on http://${HOST}:${PORT}`);
   console.log(`📁 Subscriptions file: ${SUBS_FILE}`);
