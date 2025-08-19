@@ -40,6 +40,7 @@ jobs:
             -v /home/ubuntu/memento/data:/data \
             --label com.centurylinklabs.watchtower.enable=false \
             --restart unless-stopped \
+            --user 1001:1001 \
             memento-mori
 
       - name: Wait for container startup
