@@ -213,8 +213,8 @@ app.post("/api/push/subscribe", (req, res) => {
   return res.status(201).json({ ok: true });
 });
 
-// Update prefs (PUT JSON: { endpoint, dob, gender, customLifeExpectancy, timezone? })
-app.put("/api/push/prefs", (req, res) => {
+// Update prefs handler (reusable for PUT and POST)
+const updatePrefsHandler = (req, res) => {
   const { endpoint, dob, gender, customLifeExpectancy, timezone } =
     req.body || {};
   if (!endpoint) return res.status(400).json({ error: "endpoint required" });
@@ -237,13 +237,10 @@ app.put("/api/push/prefs", (req, res) => {
 
   writeSubscriptions(list);
   return res.json({ ok: true });
-});
+};
 
-// Compat: POST /api/push/prefs -> redirige vers PUT handler
-app.post("/api/push/prefs", (req, res) => {
-  req.method = "PUT";
-  return app._router.handle(req, res);
-});
+app.put("/api/push/prefs", updatePrefsHandler);
+app.post("/api/push/prefs", updatePrefsHandler);
 
 // Unsubscribe
 app.delete("/api/push/unsubscribe", (req, res) => {
