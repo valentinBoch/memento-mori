@@ -37,9 +37,9 @@ jobs:
       # Étape 5: Lancer le nouveau conteneur avec la nouvelle image
       # -d : Détaché (tourne en arrière-plan)
       # --name memento-mori : Donne un nom au conteneur
-      # -p ... : Mappe un port de l'hôte vers un port du conteneur (À ADAPTER !)
-      # -v ... : (Optionnel) Monte des volumes pour les données persistantes (À ADAPTER !)
-      # -e ... : (Optionnel) Passe des variables d'environnement (À ADAPTER !)
+      # -p ... : Mappe un port de l'hôte vers un port du conteneur
+      # -v ... : (Optionnel) Monte des volumes pour les données persistantes
+      # -e ... : (Optionnel) Passe des variables d'environnement
       # memento-mori : Utilise l'image que nous venons de construire
       - name: Start new container
         run: |
