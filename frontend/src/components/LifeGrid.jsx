@@ -1,7 +1,6 @@
 // frontend/src/components/LifeGrid.jsx
-import React from 'react';
+import React, { useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import Dot from './Dot';
 
 // SVG grid geometry constants
 const WEEKS_PER_ROW = 52;
@@ -14,47 +13,49 @@ const YEARS_THRESHOLD_FOR_SPLIT = 55;
 
 const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
   const { t, i18n } = useTranslation();
-  const weeksArray = Array.from({ length: totalWeeks }, (_, i) => i);
-  const totalRows = Math.ceil(totalWeeks / WEEKS_PER_ROW);
+
+  // Precompute and memoize arrays/derived values to avoid heavy work on each render
+  const weeksArray = useMemo(() => Array.from({ length: totalWeeks }, (_, i) => i), [totalWeeks]);
+  const totalRows = useMemo(() => Math.ceil(totalWeeks / WEEKS_PER_ROW), [totalWeeks]);
 
   // Decide whether to use a single or a split (two-column) layout
-  const useSplitLayout = totalRows > YEARS_THRESHOLD_FOR_SPLIT;
-  
-  let svgWidth, svgHeight, viewBox;
-  // These will be set only when split layout is used
-  let splitIndex = null; // number of weeks in the left block (floor(totalWeeks/2))
-  let blockWidth = null;
-  let bigGapBetweenBlocks = null;
+  const layout = useMemo(() => {
+    const useSplitLayout = totalRows > YEARS_THRESHOLD_FOR_SPLIT;
 
-  if (useSplitLayout) {
-    // Two-column layout based on HALF OF THE WEEKS, not rows
-    splitIndex = Math.floor(totalWeeks / 2);
-    const leftBlockWeeks = splitIndex;
-    const rightBlockWeeks = totalWeeks - splitIndex;
+    if (useSplitLayout) {
+      const splitIndex = Math.floor(totalWeeks / 2);
+      const leftBlockWeeks = splitIndex;
+      const rightBlockWeeks = totalWeeks - splitIndex;
 
-    const leftRows = Math.ceil(leftBlockWeeks / WEEKS_PER_ROW);
-    const rightRows = Math.ceil(rightBlockWeeks / WEEKS_PER_ROW);
+      const leftRows = Math.ceil(leftBlockWeeks / WEEKS_PER_ROW);
+      const rightRows = Math.ceil(rightBlockWeeks / WEEKS_PER_ROW);
 
-    blockWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
-    bigGapBetweenBlocks = DOT_DIAMETER_WITH_GAP * 4;
+      const blockWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
+      const bigGapBetweenBlocks = DOT_DIAMETER_WITH_GAP * 4;
 
-    svgWidth = (blockWidth * 2) + bigGapBetweenBlocks;
-    svgHeight = Math.max(leftRows, rightRows) * DOT_DIAMETER_WITH_GAP - GAP;
-  } else {
-    // Single-column layout calculations
-    svgWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
-    svgHeight = totalRows * DOT_DIAMETER_WITH_GAP - GAP;
-  }
-  viewBox = `0 0 ${svgWidth} ${svgHeight}`;
+      const svgWidth = (blockWidth * 2) + bigGapBetweenBlocks;
+      const svgHeight = Math.max(leftRows, rightRows) * DOT_DIAMETER_WITH_GAP - GAP;
 
+      return { useSplitLayout, splitIndex, blockWidth, bigGapBetweenBlocks, svgWidth, svgHeight };
+    }
+
+    const svgWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
+    const svgHeight = totalRows * DOT_DIAMETER_WITH_GAP - GAP;
+    return { useSplitLayout: false, splitIndex: null, blockWidth: null, bigGapBetweenBlocks: null, svgWidth, svgHeight };
+  }, [totalRows, totalWeeks]);
+
+  const viewBox = `0 0 ${layout.svgWidth} ${layout.svgHeight}`;
   const percentageLived = ((pastWeeks / totalWeeks) * 100).toFixed(1);
 
-  // Formats the date for the tooltip according to the current language
-  const getWeekDate = (weekIndex) => {
-    const date = new Date(birthDate);
-    date.setDate(date.getDate() + weekIndex * 7);
-    return new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(date);
-  };
+  // Reuse a single date formatter and precomputed birth timestamp
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }), [i18n.language]);
+  const birthMs = useMemo(() => (new Date(birthDate)).getTime(), [birthDate]);
+  const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+  const getWeekDate = useCallback((weekIndex) => {
+    const d = new Date(birthMs + weekIndex * MS_PER_WEEK);
+    return dateFormatter.format(d);
+  }, [birthMs, dateFormatter]);
 
   return (
     <div className="life-grid-container">
@@ -65,26 +66,27 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
       </div>
 
       <svg className="life-grid-svg" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
-        {weeksArray.map(weekIndex => {
+        {weeksArray.map((weekIndex) => {
           let row, col, cx, cy;
-          const currentYear = Math.floor(weekIndex / WEEKS_PER_ROW);
 
-          if (useSplitLayout) {
-            // Place the first half of weeks entirely in the left block, the rest in the right block
-            const leftWeeks = splitIndex !== null ? splitIndex : Math.floor(totalWeeks / 2);
+          if (layout.useSplitLayout) {
+            const leftWeeks = layout.splitIndex !== null ? layout.splitIndex : Math.floor(totalWeeks / 2);
             const isRight = weekIndex >= leftWeeks;
             const blockIndex = isRight ? (weekIndex - leftWeeks) : weekIndex;
 
             row = Math.floor(blockIndex / WEEKS_PER_ROW);
             col = blockIndex % WEEKS_PER_ROW;
 
-            const xOffset = isRight ? (blockWidth + bigGapBetweenBlocks) : 0;
+            const xOffset = isRight ? (layout.blockWidth + layout.bigGapBetweenBlocks) : 0;
             cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS + xOffset;
             cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
           } else {
-            row = currentYear; col = weekIndex % WEEKS_PER_ROW; cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS; cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+            row = Math.floor(weekIndex / WEEKS_PER_ROW);
+            col = weekIndex % WEEKS_PER_ROW;
+            cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+            cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
           }
-          
+
           const isPast = weekIndex < pastWeeks;
           const isCurrent = weekIndex === pastWeeks;
 
@@ -99,13 +101,10 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
           }
 
           return (
-            <Dot 
-              key={weekIndex} 
-              cx={cx} cy={cy} 
-              r={DOT_RADIUS} 
-              className={className} 
-              tooltipText={t('tooltip.weekOf', { date: getWeekDate(weekIndex) })}
-            />
+            <g key={weekIndex}>
+              <circle cx={cx} cy={cy} r={DOT_RADIUS} className={className} />
+              <title>{t('tooltip.weekOf', { date: getWeekDate(weekIndex) })}</title>
+            </g>
           );
         })}
       </svg>
@@ -113,4 +112,4 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
   );
 };
 
-export default LifeGrid;
+export default memo(LifeGrid);

@@ -457,8 +457,8 @@ footer {
 }
 
 /* Light theme background override */
-:root[data-theme="light"] html,
-:root[data-theme="light"] body {
+html[data-theme="light"],
+html[data-theme="light"] body {
   background: var(--bg-color);
 }
 
@@ -514,7 +514,7 @@ footer {
 
   .life-grid-container {
     flex-grow: 0;
-    overflow-x: auto;
+    overflow-x: hidden;
     padding-bottom: 0.5rem;
   }
 
@@ -527,7 +527,6 @@ footer {
   circle.dot.current { transform: scale(1.6); }
 
   /* Avoid horizontal scroll on mobile */
-  .life-grid-container { overflow-x: hidden; }
 
   /* Slight stroke to enhance dot contrast on mobile */
   circle.dot {
