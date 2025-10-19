@@ -36,12 +36,12 @@ jobs:
           docker run -d \
             --name memento-mori \
             --env-file .env \
-            -p 5173:3001 \
             -e DATA_DIR=/data \
             -v /home/ubuntu/memento/data:/data \
             --label com.centurylinklabs.watchtower.enable=false \
             --restart unless-stopped \
             --user 1001:1001 \
+            --network web \
             memento-mori
 
       - name: Wait for container startup
