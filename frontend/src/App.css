@@ -951,13 +951,13 @@ html[data-theme="light"] input[type=date]::-webkit-calendar-picker-indicator {
   }
 
   circle.dot {
-    transform: scale(1.08);
+    transform: none;
     stroke: rgba(255, 255, 255, 0.08);
     stroke-width: 0.5;
   }
 
   circle.dot.current {
-    transform: scale(1.2);
+    transform: none;
     stroke-width: 1.3;
   }
 

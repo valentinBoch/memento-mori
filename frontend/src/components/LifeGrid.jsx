@@ -15,7 +15,11 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = fals
   const { t, i18n } = useTranslation();
   const safePastWeeks = Math.max(0, Math.min(pastWeeks, totalWeeks));
   const weeksLeft = Math.max(totalWeeks - safePastWeeks, 0);
-  const edgeInset = preferCompactLayout ? DOT_RADIUS * 3 : 0;
+  const regularDotRadius = preferCompactLayout ? DOT_RADIUS * 1.08 : DOT_RADIUS;
+  const currentDotRadius = preferCompactLayout ? DOT_RADIUS * 1.2 : DOT_RADIUS;
+  const maxDotRadius = Math.max(regularDotRadius, currentDotRadius);
+  const dotStride = DOT_DIAMETER_WITH_GAP;
+  const edgeInset = preferCompactLayout ? currentDotRadius + GAP : 0;
 
   // Precompute and memoize arrays/derived values to avoid heavy work on each render
   const weeksArray = useMemo(() => Array.from({ length: totalWeeks }, (_, i) => i), [totalWeeks]);
@@ -33,23 +37,23 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = fals
       const leftRows = Math.ceil(leftBlockWeeks / WEEKS_PER_ROW);
       const rightRows = Math.ceil(rightBlockWeeks / WEEKS_PER_ROW);
 
-      const blockWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
-      const bigGapBetweenBlocks = DOT_DIAMETER_WITH_GAP * 4;
+      const blockWidth = ((WEEKS_PER_ROW - 1) * dotStride) + (maxDotRadius * 2);
+      const bigGapBetweenBlocks = dotStride * 4;
 
       const baseWidth = (blockWidth * 2) + bigGapBetweenBlocks;
-      const baseHeight = Math.max(leftRows, rightRows) * DOT_DIAMETER_WITH_GAP - GAP;
+      const baseHeight = ((Math.max(leftRows, rightRows) - 1) * dotStride) + (maxDotRadius * 2);
       const svgWidth = baseWidth + (edgeInset * 2);
       const svgHeight = baseHeight + (edgeInset * 2);
 
       return { useSplitLayout, splitIndex, blockWidth, bigGapBetweenBlocks, svgWidth, svgHeight };
     }
 
-    const baseWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
-    const baseHeight = totalRows * DOT_DIAMETER_WITH_GAP - GAP;
+    const baseWidth = ((WEEKS_PER_ROW - 1) * dotStride) + (maxDotRadius * 2);
+    const baseHeight = ((totalRows - 1) * dotStride) + (maxDotRadius * 2);
     const svgWidth = baseWidth + (edgeInset * 2);
     const svgHeight = baseHeight + (edgeInset * 2);
     return { useSplitLayout: false, splitIndex: null, blockWidth: null, bigGapBetweenBlocks: null, svgWidth, svgHeight };
-  }, [edgeInset, preferCompactLayout, totalRows, totalWeeks]);
+  }, [dotStride, edgeInset, maxDotRadius, preferCompactLayout, totalRows, totalWeeks]);
 
   const viewBox = `0 0 ${layout.svgWidth} ${layout.svgHeight}`;
   const percentageLived = totalWeeks > 0
@@ -97,13 +101,13 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = fals
               col = blockIndex % WEEKS_PER_ROW;
 
               const xOffset = isRight ? (layout.blockWidth + layout.bigGapBetweenBlocks) : 0;
-              cx = edgeInset + col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS + xOffset;
-              cy = edgeInset + row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+              cx = edgeInset + col * dotStride + maxDotRadius + xOffset;
+              cy = edgeInset + row * dotStride + maxDotRadius;
             } else {
               row = Math.floor(weekIndex / WEEKS_PER_ROW);
               col = weekIndex % WEEKS_PER_ROW;
-              cx = edgeInset + col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
-              cy = edgeInset + row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+              cx = edgeInset + col * dotStride + maxDotRadius;
+              cy = edgeInset + row * dotStride + maxDotRadius;
             }
 
             const isPast = weekIndex < safePastWeeks;
@@ -120,7 +124,12 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = fals
 
             return (
               <g key={weekIndex}>
-                <circle cx={cx} cy={cy} r={DOT_RADIUS} className={className}>
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={isCurrent ? currentDotRadius : regularDotRadius}
+                  className={className}
+                >
                   <title>{t('tooltip.weekOf', { date: getWeekDate(weekIndex) })}</title>
                 </circle>
               </g>
