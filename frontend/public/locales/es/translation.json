@@ -19,6 +19,44 @@
     "invalidDob": "Por favor, introduce una fecha de nacimiento válida.",
     "futureDob": "La fecha de nacimiento no puede ser en el futuro."
   },
+  "quotes": {
+    "title": "Una reflexión para hoy",
+    "refresh": "Otra cita",
+    "items": [
+      {
+        "text": "La vida no es corta, pero desperdiciamos gran parte de ella.",
+        "author": "Séneca"
+      },
+      {
+        "text": "No pierdas más tiempo discutiendo cómo debe ser una buena persona. Sé una.",
+        "author": "Marco Aurelio"
+      },
+      {
+        "text": "Lo que perturba a los hombres no son las cosas, sino los juicios que hacen sobre ellas.",
+        "author": "Epicteto"
+      },
+      {
+        "text": "El obstáculo para la acción impulsa la acción. Lo que se interpone en el camino se convierte en el camino.",
+        "author": "Marco Aurelio"
+      },
+      {
+        "text": "Sufrimos más a menudo en la imaginación que en la realidad.",
+        "author": "Séneca"
+      },
+      {
+        "text": "Tienes poder sobre tu mente, no sobre los acontecimientos externos.",
+        "author": "Marco Aurelio"
+      },
+      {
+        "text": "Mientras aplazamos las cosas, la vida pasa.",
+        "author": "Séneca"
+      },
+      {
+        "text": "Cada día es una vida entera.",
+        "author": "Séneca"
+      }
+    ]
+  },
   "toolbar": {
     "label": "Opciones de visualización",
     "language": "Idioma",

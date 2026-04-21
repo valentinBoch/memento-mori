@@ -11,7 +11,7 @@ const DOT_DIAMETER_WITH_GAP = (DOT_RADIUS * 2) + GAP;
 // The number of years after which the layout splits into two columns
 const YEARS_THRESHOLD_FOR_SPLIT = 55;
 
-const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
+const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = false }) => {
   const { t, i18n } = useTranslation();
   const safePastWeeks = Math.max(0, Math.min(pastWeeks, totalWeeks));
   const weeksLeft = Math.max(totalWeeks - safePastWeeks, 0);
@@ -22,7 +22,7 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
 
   // Decide whether to use a single or a split (two-column) layout
   const layout = useMemo(() => {
-    const useSplitLayout = totalRows > YEARS_THRESHOLD_FOR_SPLIT;
+    const useSplitLayout = !preferCompactLayout && totalRows > YEARS_THRESHOLD_FOR_SPLIT;
 
     if (useSplitLayout) {
       const splitIndex = Math.floor(totalWeeks / 2);
@@ -44,9 +44,10 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
     const svgWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
     const svgHeight = totalRows * DOT_DIAMETER_WITH_GAP - GAP;
     return { useSplitLayout: false, splitIndex: null, blockWidth: null, bigGapBetweenBlocks: null, svgWidth, svgHeight };
-  }, [totalRows, totalWeeks]);
+  }, [preferCompactLayout, totalRows, totalWeeks]);
 
-  const viewBox = `0 0 ${layout.svgWidth} ${layout.svgHeight}`;
+  const svgPadding = DOT_RADIUS * 2;
+  const viewBox = `${-svgPadding} ${-svgPadding} ${layout.svgWidth + (svgPadding * 2)} ${layout.svgHeight + (svgPadding * 2)}`;
   const percentageLived = totalWeeks > 0
     ? ((safePastWeeks / totalWeeks) * 100).toFixed(1)
     : '0.0';
@@ -69,56 +70,60 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
         <p><span>{t('stats.weeksLeft', { count: weeksLeft })}</span></p>
       </div>
 
-      <svg
-        className="life-grid-svg"
-        viewBox={viewBox}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label={t('stats.percentageLived', { percentage: percentageLived })}
-      >
-        {weeksArray.map((weekIndex) => {
-          let row, col, cx, cy;
+      <div className="life-grid-frame">
+        <svg
+          className="life-grid-svg"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMin meet"
+          role="img"
+          aria-label={t('stats.percentageLived', { percentage: percentageLived })}
+        >
+          {weeksArray.map((weekIndex) => {
+            let row;
+            let col;
+            let cx;
+            let cy;
 
-          if (layout.useSplitLayout) {
-            const leftWeeks = layout.splitIndex !== null ? layout.splitIndex : Math.floor(totalWeeks / 2);
-            const isRight = weekIndex >= leftWeeks;
-            const blockIndex = isRight ? (weekIndex - leftWeeks) : weekIndex;
+            if (layout.useSplitLayout) {
+              const leftWeeks = layout.splitIndex !== null ? layout.splitIndex : Math.floor(totalWeeks / 2);
+              const isRight = weekIndex >= leftWeeks;
+              const blockIndex = isRight ? (weekIndex - leftWeeks) : weekIndex;
 
-            row = Math.floor(blockIndex / WEEKS_PER_ROW);
-            col = blockIndex % WEEKS_PER_ROW;
+              row = Math.floor(blockIndex / WEEKS_PER_ROW);
+              col = blockIndex % WEEKS_PER_ROW;
 
-            const xOffset = isRight ? (layout.blockWidth + layout.bigGapBetweenBlocks) : 0;
-            cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS + xOffset;
-            cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
-          } else {
-            row = Math.floor(weekIndex / WEEKS_PER_ROW);
-            col = weekIndex % WEEKS_PER_ROW;
-            cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
-            cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
-          }
+              const xOffset = isRight ? (layout.blockWidth + layout.bigGapBetweenBlocks) : 0;
+              cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS + xOffset;
+              cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+            } else {
+              row = Math.floor(weekIndex / WEEKS_PER_ROW);
+              col = weekIndex % WEEKS_PER_ROW;
+              cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+              cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+            }
 
-          const isPast = weekIndex < safePastWeeks;
-          const isCurrent = weekIndex === safePastWeeks;
+            const isPast = weekIndex < safePastWeeks;
+            const isCurrent = weekIndex === safePastWeeks;
 
-          // Assign a single, mutually exclusive class for styling
-          let className = 'dot';
-          if (isCurrent) {
-            className += ' current';
-          } else if (isPast) {
-            className += ' past';
-          } else {
-            className += ' future';
-          }
+            let className = 'dot';
+            if (isCurrent) {
+              className += ' current';
+            } else if (isPast) {
+              className += ' past';
+            } else {
+              className += ' future';
+            }
 
-          return (
-            <g key={weekIndex}>
-              <circle cx={cx} cy={cy} r={DOT_RADIUS} className={className}>
-                <title>{t('tooltip.weekOf', { date: getWeekDate(weekIndex) })}</title>
-              </circle>
-            </g>
-          );
-        })}
-      </svg>
+            return (
+              <g key={weekIndex}>
+                <circle cx={cx} cy={cy} r={DOT_RADIUS} className={className}>
+                  <title>{t('tooltip.weekOf', { date: getWeekDate(weekIndex) })}</title>
+                </circle>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 };

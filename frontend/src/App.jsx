@@ -25,6 +25,17 @@ const LANGUAGE_OPTIONS = [
 ];
 const ACCENT_OPTIONS = ['teal', 'amber', 'indigo'];
 
+function pickRandomIndex(length, excludedIndex = -1) {
+  if (length <= 1) return 0;
+
+  let nextIndex = excludedIndex;
+  while (nextIndex === excludedIndex) {
+    nextIndex = Math.floor(Math.random() * length);
+  }
+
+  return nextIndex;
+}
+
 function base64UrlToUint8Array(base64UrlString) {
   const padding = '='.repeat((4 - (base64UrlString.length % 4)) % 4);
   const base64 = (base64UrlString + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -220,7 +231,7 @@ async function readErrorMessage(response, fallbackMessage) {
 }
 
 function App() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [lifeData, setLifeData] = useState(null);
   const [errorKey, setErrorKey] = useState('');
@@ -231,12 +242,19 @@ function App() {
   const [accent, setAccent] = useState(() => getAccentPreference());
   const [language, setLanguage] = useState(() => getCurrentLanguage());
   const [notificationAction, setNotificationAction] = useState('');
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [preferCompactGrid, setPreferCompactGrid] = useState(
+    () => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false),
+  );
 
   const dateInputRef = useRef(null);
   const customAgeRef = useRef(null);
   const dayRef = useRef(null);
   const monthRef = useRef(null);
   const yearRef = useRef(null);
+  const quoteEntriesRaw = t('quotes.items', { returnObjects: true });
+  const quoteEntries = Array.isArray(quoteEntriesRaw) ? quoteEntriesRaw : [];
+  const currentQuote = quoteEntries[quoteIndex] ?? null;
 
   useEffect(() => {
     if (!isMobile && dateInputRef.current) {
@@ -283,6 +301,35 @@ function App() {
   useEffect(() => {
     persistLanguage(language);
   }, [language]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    const updateViewportPreference = () => setPreferCompactGrid(mediaQuery.matches);
+
+    updateViewportPreference();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updateViewportPreference);
+      return () => mediaQuery.removeEventListener('change', updateViewportPreference);
+    }
+
+    mediaQuery.addListener(updateViewportPreference);
+    return () => mediaQuery.removeListener(updateViewportPreference);
+  }, []);
+
+  useEffect(() => {
+    if (!quoteEntries.length) return;
+    setQuoteIndex((current) => (
+      current < quoteEntries.length ? current : pickRandomIndex(quoteEntries.length)
+    ));
+  }, [quoteEntries.length]);
+
+  useEffect(() => {
+    if (!quoteEntries.length) return;
+    setQuoteIndex((current) => pickRandomIndex(quoteEntries.length, current));
+  }, [i18n.resolvedLanguage, quoteEntries.length]);
 
   useEffect(() => {
     if (formData.gender === 'custom') {
@@ -490,6 +537,11 @@ function App() {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   };
 
+  const refreshQuote = () => {
+    if (!quoteEntries.length) return;
+    setQuoteIndex((current) => pickRandomIndex(quoteEntries.length, current));
+  };
+
   return (
     <div className="App">
       <div className="background-orb orb-a" aria-hidden="true" />
@@ -541,6 +593,22 @@ function App() {
           <p className="subtitle">{t('subtitle')}</p>
         </div>
       </header>
+
+      {currentQuote ? (
+        <section className="quote-panel" aria-label={t('quotes.title')}>
+          <div className="quote-panel-header">
+            <p className="quote-eyebrow">{t('quotes.title')}</p>
+            <button type="button" className="quote-refresh" onClick={refreshQuote}>
+              {t('quotes.refresh')}
+            </button>
+          </div>
+
+          <blockquote className="quote-card">
+            <p className="quote-text">{currentQuote.text}</p>
+            <footer className="quote-author">{currentQuote.author}</footer>
+          </blockquote>
+        </section>
+      ) : null}
 
       <main>
         {!lifeData ? (
@@ -651,6 +719,7 @@ function App() {
               totalWeeks={lifeData.totalWeeks}
               pastWeeks={lifeData.pastWeeks}
               birthDate={lifeData.birthDate}
+              preferCompactLayout={preferCompactGrid}
             />
 
             <button type="button" onClick={resetApp} className="reset-button">

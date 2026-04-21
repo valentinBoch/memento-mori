@@ -19,6 +19,44 @@
     "invalidDob": "Veuillez entrer une date de naissance valide.",
     "futureDob": "La date de naissance ne peut pas être dans le futur."
   },
+  "quotes": {
+    "title": "Une pensée pour aujourd'hui",
+    "refresh": "Une autre citation",
+    "items": [
+      {
+        "text": "La vie n'est pas courte, mais nous en perdons beaucoup.",
+        "author": "Sénèque"
+      },
+      {
+        "text": "Ne perds plus de temps à discuter de ce que doit être une bonne personne. Sois-en une.",
+        "author": "Marc Aurèle"
+      },
+      {
+        "text": "Ce qui trouble les hommes, ce ne sont pas les choses, mais les jugements qu'ils portent sur les choses.",
+        "author": "Épictète"
+      },
+      {
+        "text": "L'obstacle à l'action fait avancer l'action. Ce qui se dresse sur le chemin devient le chemin.",
+        "author": "Marc Aurèle"
+      },
+      {
+        "text": "Nous souffrons plus souvent en imagination qu'en réalité.",
+        "author": "Sénèque"
+      },
+      {
+        "text": "Tu as pouvoir sur ton esprit, non sur les événements extérieurs.",
+        "author": "Marc Aurèle"
+      },
+      {
+        "text": "Pendant que nous remettons les choses à plus tard, la vie passe.",
+        "author": "Sénèque"
+      },
+      {
+        "text": "Chaque jour est une vie entière.",
+        "author": "Sénèque"
+      }
+    ]
+  },
   "toolbar": {
     "label": "Options d'affichage",
     "language": "Langue",

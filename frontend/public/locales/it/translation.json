@@ -19,6 +19,44 @@
     "invalidDob": "Per favore, inserisci una data di nascita valida.",
     "futureDob": "La data di nascita non può essere nel futuro."
   },
+  "quotes": {
+    "title": "Un pensiero per oggi",
+    "refresh": "Un'altra citazione",
+    "items": [
+      {
+        "text": "La vita non è breve, ma ne sprechiamo gran parte.",
+        "author": "Seneca"
+      },
+      {
+        "text": "Non perdere altro tempo a discutere su come debba essere una buona persona. Sii tale.",
+        "author": "Marco Aurelio"
+      },
+      {
+        "text": "Non sono le cose a turbare gli uomini, ma i giudizi che essi formulano sulle cose.",
+        "author": "Epitteto"
+      },
+      {
+        "text": "L'ostacolo all'azione fa avanzare l'azione. Ciò che si frappone sul cammino diventa il cammino.",
+        "author": "Marco Aurelio"
+      },
+      {
+        "text": "Soffriamo più spesso nell'immaginazione che nella realtà.",
+        "author": "Seneca"
+      },
+      {
+        "text": "Hai potere sulla tua mente, non sugli eventi esterni.",
+        "author": "Marco Aurelio"
+      },
+      {
+        "text": "Mentre rimandiamo, la vita passa.",
+        "author": "Seneca"
+      },
+      {
+        "text": "Ogni giorno è una vita intera.",
+        "author": "Seneca"
+      }
+    ]
+  },
   "toolbar": {
     "label": "Opzioni di visualizzazione",
     "language": "Lingua",

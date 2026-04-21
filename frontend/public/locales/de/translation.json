@@ -19,6 +19,44 @@
     "invalidDob": "Bitte gib ein gueltiges Geburtsdatum ein.",
     "futureDob": "Das Geburtsdatum kann nicht in der Zukunft liegen."
   },
+  "quotes": {
+    "title": "Ein Gedanke fuer heute",
+    "refresh": "Noch ein Zitat",
+    "items": [
+      {
+        "text": "Das Leben ist nicht kurz, aber wir vergeuden einen grossen Teil davon.",
+        "author": "Seneca"
+      },
+      {
+        "text": "Vergeude keine Zeit mehr damit zu diskutieren, wie ein guter Mensch sein soll. Sei einer.",
+        "author": "Mark Aurel"
+      },
+      {
+        "text": "Nicht die Dinge selbst beunruhigen die Menschen, sondern die Urteile, die sie ueber die Dinge faellen.",
+        "author": "Epiktet"
+      },
+      {
+        "text": "Das Hindernis des Handelns bringt das Handeln voran. Was im Weg steht, wird zum Weg.",
+        "author": "Mark Aurel"
+      },
+      {
+        "text": "Wir leiden oefter in der Vorstellung als in der Wirklichkeit.",
+        "author": "Seneca"
+      },
+      {
+        "text": "Du hast Macht ueber deinen Geist, nicht ueber aeussere Ereignisse.",
+        "author": "Mark Aurel"
+      },
+      {
+        "text": "Waehrend wir aufschieben, geht das Leben vorueber.",
+        "author": "Seneca"
+      },
+      {
+        "text": "Jeder Tag ist ein ganzes Leben.",
+        "author": "Seneca"
+      }
+    ]
+  },
   "toolbar": {
     "label": "Anzeigeoptionen",
     "language": "Sprache",

@@ -98,15 +98,15 @@ html {
   background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0) 72%);
 }
 
-header,
-footer,
-main {
+.App > header,
+.App > footer,
+.App > main {
   width: min(100%, 1120px);
   position: relative;
   z-index: 1;
 }
 
-header {
+.App > header {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -199,7 +199,7 @@ header {
   pointer-events: none;
 }
 
-header h1 {
+.App > header h1 {
   position: relative;
   z-index: 1;
   font-family: var(--font-display);
@@ -219,7 +219,71 @@ header h1 {
   font-size: clamp(1rem, 2.5vw, 1.2rem);
 }
 
-main {
+.quote-panel {
+  width: min(100%, 58rem);
+  position: relative;
+  z-index: 1;
+  padding: 1rem 1.1rem 1.15rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    var(--surface);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(16px) saturate(115%);
+}
+
+.quote-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.quote-eyebrow {
+  color: var(--muted-color);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quote-refresh {
+  width: auto;
+  min-height: 2.4rem;
+  margin-top: 0;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-color);
+  box-shadow: none;
+}
+
+.quote-card {
+  margin-top: 0.9rem;
+}
+
+.quote-text {
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 2.8vw, 2rem);
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.quote-author {
+  margin-top: 0.85rem;
+  color: var(--primary-color);
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.quote-author::before {
+  content: '- ';
+}
+
+.App > main {
   flex: 1;
   display: flex;
   align-items: center;
@@ -415,6 +479,7 @@ button:focus-visible {
     rgba(255, 255, 255, 0.03);
   animation: fadeIn 1.5s ease-in-out;
   min-height: 0;
+  overflow: hidden;
   box-shadow: var(--shadow-1);
 }
 
@@ -441,6 +506,17 @@ button:focus-visible {
   color: var(--primary-color);
 }
 
+.life-grid-frame {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: clamp(0.35rem, 1vw, 0.7rem);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  -webkit-overflow-scrolling: touch;
+}
+
 .life-grid-svg {
   width: 100%;
   height: auto;
@@ -448,7 +524,7 @@ button:focus-visible {
   margin: 0 auto;
   display: block;
   will-change: transform;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* --- SVG Dot Styles --- */
@@ -527,7 +603,7 @@ circle.dot.current:hover {
   width: 100%;
 }
 
-footer {
+.App > footer {
   padding-top: 0.25rem;
   padding-bottom: 0.35rem;
   color: rgba(255, 255, 255, 0.54);
@@ -750,7 +826,26 @@ html[data-theme="light"] input[type=date]::-webkit-calendar-picker-indicator {
     padding: 1.35rem;
   }
 
-  header h1 {
+  .quote-panel {
+    width: 100%;
+    border-radius: 24px;
+    padding: 0.95rem 0.95rem 1rem;
+  }
+
+  .quote-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .quote-refresh {
+    width: auto;
+  }
+
+  .quote-text {
+    font-size: clamp(1.3rem, 6vw, 1.7rem);
+  }
+
+  .App > header h1 {
     font-size: clamp(2.9rem, 17vw, 4.3rem);
   }
 
@@ -758,7 +853,7 @@ html[data-theme="light"] input[type=date]::-webkit-calendar-picker-indicator {
     font-size: 1rem;
   }
 
-  main {
+  .App > main {
     align-items: stretch;
   }
 
@@ -772,18 +867,22 @@ html[data-theme="light"] input[type=date]::-webkit-calendar-picker-indicator {
     padding: 1rem;
   }
 
+  .life-grid-frame {
+    padding: 0.2rem;
+  }
+
   .stats {
     gap: 0.65rem;
   }
 
   circle.dot {
-    transform: scale(1.34);
+    transform: scale(1.12);
     stroke: rgba(255, 255, 255, 0.08);
     stroke-width: 0.5;
   }
 
   circle.dot.current {
-    transform: scale(1.62);
+    transform: scale(1.28);
     stroke-width: 1.3;
   }
 
@@ -809,10 +908,10 @@ html[data-theme="light"] input[type=date]::-webkit-calendar-picker-indicator {
   }
 
   circle.dot {
-    transform: scale(1.52);
+    transform: scale(1.16);
   }
 
   circle.dot.current {
-    transform: scale(1.82);
+    transform: scale(1.34);
   }
 }
