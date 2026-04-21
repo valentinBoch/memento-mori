@@ -46,7 +46,7 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = fals
     return { useSplitLayout: false, splitIndex: null, blockWidth: null, bigGapBetweenBlocks: null, svgWidth, svgHeight };
   }, [preferCompactLayout, totalRows, totalWeeks]);
 
-  const svgPadding = DOT_RADIUS * 2;
+  const svgPadding = preferCompactLayout ? DOT_RADIUS * 4 : DOT_RADIUS * 2;
   const viewBox = `${-svgPadding} ${-svgPadding} ${layout.svgWidth + (svgPadding * 2)} ${layout.svgHeight + (svgPadding * 2)}`;
   const percentageLived = totalWeeks > 0
     ? ((safePastWeeks / totalWeeks) * 100).toFixed(1)
