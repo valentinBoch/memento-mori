@@ -1,7 +1,7 @@
 // backend/quotes.js
-// 150 citations qualitatives avec auteur pour Memento Mori
+// Citations avec auteur pour Memento Mori
 
-export const QUOTES = [
+const RAW_QUOTES = [
   // --- STOÏCISME & PHILOSOPHIE ---
   "Ce qui trouble les hommes, ce ne sont pas les choses, mais les jugements qu’ils portent sur les choses. – Épictète",
   "Ne gaspille plus de temps à discuter de ce que doit être un homme de bien. Sois-en un. – Marc Aurèle",
@@ -112,3 +112,85 @@ export const QUOTES = [
   "Tout ce que tu peux imaginer est réel. – Picasso",
   "Les rêves ne fonctionnent que si tu travailles dur. – Anonyme",
 ];
+
+const QUOTE_SEPARATOR = " – ";
+
+function normalizeQuote(rawQuote, index) {
+  const separatorIndex = rawQuote.lastIndexOf(QUOTE_SEPARATOR);
+
+  if (separatorIndex === -1) {
+    return {
+      id: index,
+      text: rawQuote.trim(),
+      author: "Anonyme",
+    };
+  }
+
+  return {
+    id: index,
+    text: rawQuote.slice(0, separatorIndex).trim(),
+    author: rawQuote.slice(separatorIndex + QUOTE_SEPARATOR.length).trim(),
+  };
+}
+
+function getDatePartsForTimeZone(timeZone, now = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const partMap = Object.fromEntries(
+    formatter
+      .formatToParts(now)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+
+  return {
+    year: partMap.year,
+    month: partMap.month,
+    day: partMap.day,
+  };
+}
+
+function getSafeTimeZone(timeZone) {
+  try {
+    getDatePartsForTimeZone(timeZone);
+    return timeZone;
+  } catch {
+    return "Europe/Paris";
+  }
+}
+
+function getQuoteIndexFromDateKey(dateKey, totalQuotes) {
+  if (!totalQuotes) return 0;
+
+  let hash = 7;
+  for (const char of dateKey) {
+    hash = (hash * 31 + char.charCodeAt(0)) % totalQuotes;
+  }
+
+  return hash % totalQuotes;
+}
+
+export const QUOTES = RAW_QUOTES.map(normalizeQuote);
+
+export function getQuoteOfDay(timeZone = "Europe/Paris", now = new Date()) {
+  const safeTimeZone = getSafeTimeZone(timeZone);
+  const { year, month, day } = getDatePartsForTimeZone(safeTimeZone, now);
+  const dateKey = `${year}-${month}-${day}`;
+  const index = getQuoteIndexFromDateKey(dateKey, QUOTES.length);
+
+  return {
+    ...QUOTES[index],
+    dateKey,
+    index,
+    timeZone: safeTimeZone,
+  };
+}
+
+export function formatQuoteLine(quote) {
+  return `${quote.text} — ${quote.author}`;
+}

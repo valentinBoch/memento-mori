@@ -25,15 +25,15 @@ const LANGUAGE_OPTIONS = [
 ];
 const ACCENT_OPTIONS = ['teal', 'amber', 'indigo'];
 
-function pickRandomIndex(length, excludedIndex = -1) {
-  if (length <= 1) return 0;
+function getDeterministicIndex(seed, length) {
+  if (!length) return 0;
 
-  let nextIndex = excludedIndex;
-  while (nextIndex === excludedIndex) {
-    nextIndex = Math.floor(Math.random() * length);
+  let hash = 7;
+  for (const char of seed) {
+    hash = (hash * 31 + char.charCodeAt(0)) % length;
   }
 
-  return nextIndex;
+  return hash % length;
 }
 
 function base64UrlToUint8Array(base64UrlString) {
@@ -231,7 +231,7 @@ async function readErrorMessage(response, fallbackMessage) {
 }
 
 function App() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [lifeData, setLifeData] = useState(null);
   const [errorKey, setErrorKey] = useState('');
@@ -242,19 +242,56 @@ function App() {
   const [accent, setAccent] = useState(() => getAccentPreference());
   const [language, setLanguage] = useState(() => getCurrentLanguage());
   const [notificationAction, setNotificationAction] = useState('');
-  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [dailyQuote, setDailyQuote] = useState(null);
   const [preferCompactGrid, setPreferCompactGrid] = useState(
     () => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false),
   );
+  const [isToolbarCompact, setIsToolbarCompact] = useState(
+    () => (typeof window !== 'undefined' ? window.innerWidth <= 640 : false),
+  );
+  const [isToolbarOpen, setIsToolbarOpen] = useState(false);
 
   const dateInputRef = useRef(null);
   const customAgeRef = useRef(null);
   const dayRef = useRef(null);
   const monthRef = useRef(null);
   const yearRef = useRef(null);
+  const todayStr = getTodayLocalDateString();
   const quoteEntriesRaw = t('quotes.items', { returnObjects: true });
   const quoteEntries = Array.isArray(quoteEntriesRaw) ? quoteEntriesRaw : [];
-  const currentQuote = quoteEntries[quoteIndex] ?? null;
+  const fallbackQuote = quoteEntries.length
+    ? quoteEntries[getDeterministicIndex(todayStr, quoteEntries.length)]
+    : null;
+  const currentQuote = dailyQuote ?? fallbackQuote;
+  const currentQuoteDate = dailyQuote?.dateKey
+    ? new Intl.DateTimeFormat(language, { dateStyle: 'long' }).format(
+      new Date(`${dailyQuote.dateKey}T12:00:00`),
+    )
+    : null;
+
+  async function loadDailyQuote() {
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris';
+      const response = await fetch(`/api/quotes/today?timezone=${encodeURIComponent(timezone)}`, {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error(`quote HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data?.quote?.text && data?.quote?.author) {
+        setDailyQuote(data.quote);
+        return;
+      }
+
+      setDailyQuote(null);
+    } catch (error) {
+      console.warn('Failed to load daily quote:', error);
+      setDailyQuote(null);
+    }
+  }
 
   useEffect(() => {
     if (!isMobile && dateInputRef.current) {
@@ -320,16 +357,31 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!quoteEntries.length) return;
-    setQuoteIndex((current) => (
-      current < quoteEntries.length ? current : pickRandomIndex(quoteEntries.length)
-    ));
-  }, [quoteEntries.length]);
+    if (typeof window === 'undefined') return undefined;
+
+    const mediaQuery = window.matchMedia('(max-width: 640px)');
+    const updateToolbarMode = () => {
+      const compact = mediaQuery.matches;
+      setIsToolbarCompact(compact);
+      if (!compact) {
+        setIsToolbarOpen(false);
+      }
+    };
+
+    updateToolbarMode();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updateToolbarMode);
+      return () => mediaQuery.removeEventListener('change', updateToolbarMode);
+    }
+
+    mediaQuery.addListener(updateToolbarMode);
+    return () => mediaQuery.removeListener(updateToolbarMode);
+  }, []);
 
   useEffect(() => {
-    if (!quoteEntries.length) return;
-    setQuoteIndex((current) => pickRandomIndex(quoteEntries.length, current));
-  }, [i18n.resolvedLanguage, quoteEntries.length]);
+    loadDailyQuote();
+  }, []);
 
   useEffect(() => {
     if (formData.gender === 'custom') {
@@ -347,6 +399,7 @@ function App() {
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
         resyncPushSubscription();
+        loadDailyQuote();
         if (typeof Notification !== 'undefined') {
           setNotifPermission(Notification.permission);
         }
@@ -357,8 +410,23 @@ function App() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
-  const todayStr = getTodayLocalDateString();
   const dobSegments = getDobSegments(formData.dob);
+
+  const closeToolbarIfCompact = () => {
+    if (isToolbarCompact) {
+      setIsToolbarOpen(false);
+    }
+  };
+
+  const handleLanguageChange = (event) => {
+    setLanguage(event.target.value);
+    closeToolbarIfCompact();
+  };
+
+  const handleAccentChange = (event) => {
+    setAccent(event.target.value);
+    closeToolbarIfCompact();
+  };
 
   const handleInputChange = (event) => {
     const { name, value, type } = event.target;
@@ -535,11 +603,7 @@ function App() {
 
   const toggleTheme = () => {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
-  };
-
-  const refreshQuote = () => {
-    if (!quoteEntries.length) return;
-    setQuoteIndex((current) => pickRandomIndex(quoteEntries.length, current));
+    closeToolbarIfCompact();
   };
 
   return (
@@ -548,43 +612,61 @@ function App() {
       <div className="background-orb orb-b" aria-hidden="true" />
 
       <header>
-        <div className="toolbar" aria-label={t('toolbar.label')}>
-          <div className="control select-wrapper compact">
-            <label className="visually-hidden" htmlFor="language-switcher">
-              {t('toolbar.language')}
-            </label>
-            <select
-              id="language-switcher"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value)}
+        <div className="toolbar-shell">
+          {isToolbarCompact ? (
+            <button
+              type="button"
+              className="toolbar-trigger"
+              aria-expanded={isToolbarOpen}
+              aria-controls="display-toolbar"
+              onClick={() => setIsToolbarOpen((current) => !current)}
             >
-              {LANGUAGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+              {isToolbarOpen ? t('toolbar.close') : t('toolbar.open')}
+            </button>
+          ) : null}
 
-          <button type="button" className="theme-toggle" onClick={toggleTheme}>
-            {theme === 'dark' ? t('toolbar.lightMode') : t('toolbar.darkMode')}
-          </button>
+          <div
+            id="display-toolbar"
+            className={`toolbar${isToolbarCompact ? ' is-collapsible' : ''}${isToolbarCompact && !isToolbarOpen ? ' is-hidden' : ''}`}
+            aria-label={t('toolbar.label')}
+          >
+            <div className="control select-wrapper compact">
+              <label className="visually-hidden" htmlFor="language-switcher">
+                {t('toolbar.language')}
+              </label>
+              <select
+                id="language-switcher"
+                value={language}
+                onChange={handleLanguageChange}
+              >
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="control select-wrapper compact">
-            <label className="visually-hidden" htmlFor="accent-switcher">
-              {t('toolbar.accent')}
-            </label>
-            <select
-              id="accent-switcher"
-              value={accent}
-              onChange={(event) => setAccent(event.target.value)}
-            >
-              {ACCENT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {t(`toolbar.accent${option[0].toUpperCase()}${option.slice(1)}`)}
-                </option>
-              ))}
-            </select>
+            <button type="button" className="theme-toggle" onClick={toggleTheme}>
+              {theme === 'dark' ? t('toolbar.lightMode') : t('toolbar.darkMode')}
+            </button>
+
+            <div className="control select-wrapper compact">
+              <label className="visually-hidden" htmlFor="accent-switcher">
+                {t('toolbar.accent')}
+              </label>
+              <select
+                id="accent-switcher"
+                value={accent}
+                onChange={handleAccentChange}
+              >
+                {ACCENT_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {t(`toolbar.accent${option[0].toUpperCase()}${option.slice(1)}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -598,9 +680,7 @@ function App() {
         <section className="quote-panel" aria-label={t('quotes.title')}>
           <div className="quote-panel-header">
             <p className="quote-eyebrow">{t('quotes.title')}</p>
-            <button type="button" className="quote-refresh" onClick={refreshQuote}>
-              {t('quotes.refresh')}
-            </button>
+            {currentQuoteDate ? <p className="quote-date">{currentQuoteDate}</p> : null}
           </div>
 
           <blockquote className="quote-card">

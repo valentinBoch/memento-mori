@@ -59,6 +59,8 @@
   },
   "toolbar": {
     "label": "Options d'affichage",
+    "open": "Options",
+    "close": "Fermer",
     "language": "Langue",
     "lightMode": "Mode clair",
     "darkMode": "Mode sombre",

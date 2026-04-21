@@ -10,7 +10,7 @@ import morgan from "morgan";
 import webPush from "web-push";
 import cron from "node-cron";
 import { fileURLToPath } from "url";
-import { QUOTES } from "./quotes.js";
+import { formatQuoteLine, getQuoteOfDay } from "./quotes.js";
 
 // __dirname / __filename en ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -140,11 +140,6 @@ function computeLifePercentageRemaining({ dob, gender, customLifeExpectancy }) {
   return Math.round(pct * 10) / 10; // une décimale
 }
 
-// Quotes
-function pickQuote() {
-  return QUOTES[Math.floor(Math.random() * QUOTES.length)];
-}
-
 // payload personnalisé (+ option override manuel)
 function buildPersonalizedPayload(sub, override = null) {
   if (override && (override.title || override.body || override.url)) {
@@ -155,10 +150,11 @@ function buildPersonalizedPayload(sub, override = null) {
     });
   }
   const pct = sub.prefs ? computeLifePercentageRemaining(sub.prefs) : null;
-  const quote = pickQuote();
+  const quote = getQuoteOfDay(sub.timezone || "Europe/Paris");
+  const quoteLine = formatQuoteLine(quote);
   const body =
-    pct != null ? `Vie restante: ${pct}% — ${quote}` : `Rappelle-toi: ${quote}`;
-  return JSON.stringify({ title: "Memento Mori", body, url: "/" });
+    pct != null ? `Vie restante: ${pct}%.\n${quoteLine}` : quoteLine;
+  return JSON.stringify({ title: "Memento Mori", body, url: "/", quote, dateKey: quote.dateKey });
 }
 
 function isExpiredSubscriptionError(error) {
@@ -233,6 +229,15 @@ app.get("/healthz", (_req, res) => res.status(200).json({ status: "ok" }));
 // ---------- API Push ----------
 app.get("/api/push/public-key", (_req, res) => {
   res.json({ publicKey: VAPID_PUBLIC_KEY || "" });
+});
+
+app.get("/api/quotes/today", (req, res) => {
+  const timezone =
+    typeof req.query.timezone === "string" && req.query.timezone
+      ? req.query.timezone
+      : "Europe/Paris";
+  const quote = getQuoteOfDay(timezone);
+  return res.json({ quote, dateKey: quote.dateKey });
 });
 
 // Subscribe (POST JSON: { subscription, timezone, user? })
