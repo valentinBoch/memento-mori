@@ -15,6 +15,7 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = fals
   const { t, i18n } = useTranslation();
   const safePastWeeks = Math.max(0, Math.min(pastWeeks, totalWeeks));
   const weeksLeft = Math.max(totalWeeks - safePastWeeks, 0);
+  const edgeInset = preferCompactLayout ? DOT_RADIUS * 3 : 0;
 
   // Precompute and memoize arrays/derived values to avoid heavy work on each render
   const weeksArray = useMemo(() => Array.from({ length: totalWeeks }, (_, i) => i), [totalWeeks]);
@@ -35,19 +36,22 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = fals
       const blockWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
       const bigGapBetweenBlocks = DOT_DIAMETER_WITH_GAP * 4;
 
-      const svgWidth = (blockWidth * 2) + bigGapBetweenBlocks;
-      const svgHeight = Math.max(leftRows, rightRows) * DOT_DIAMETER_WITH_GAP - GAP;
+      const baseWidth = (blockWidth * 2) + bigGapBetweenBlocks;
+      const baseHeight = Math.max(leftRows, rightRows) * DOT_DIAMETER_WITH_GAP - GAP;
+      const svgWidth = baseWidth + (edgeInset * 2);
+      const svgHeight = baseHeight + (edgeInset * 2);
 
       return { useSplitLayout, splitIndex, blockWidth, bigGapBetweenBlocks, svgWidth, svgHeight };
     }
 
-    const svgWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
-    const svgHeight = totalRows * DOT_DIAMETER_WITH_GAP - GAP;
+    const baseWidth = WEEKS_PER_ROW * DOT_DIAMETER_WITH_GAP - GAP;
+    const baseHeight = totalRows * DOT_DIAMETER_WITH_GAP - GAP;
+    const svgWidth = baseWidth + (edgeInset * 2);
+    const svgHeight = baseHeight + (edgeInset * 2);
     return { useSplitLayout: false, splitIndex: null, blockWidth: null, bigGapBetweenBlocks: null, svgWidth, svgHeight };
-  }, [preferCompactLayout, totalRows, totalWeeks]);
+  }, [edgeInset, preferCompactLayout, totalRows, totalWeeks]);
 
-  const svgPadding = preferCompactLayout ? DOT_RADIUS * 4 : DOT_RADIUS * 2;
-  const viewBox = `${-svgPadding} ${-svgPadding} ${layout.svgWidth + (svgPadding * 2)} ${layout.svgHeight + (svgPadding * 2)}`;
+  const viewBox = `0 0 ${layout.svgWidth} ${layout.svgHeight}`;
   const percentageLived = totalWeeks > 0
     ? ((safePastWeeks / totalWeeks) * 100).toFixed(1)
     : '0.0';
@@ -93,13 +97,13 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate, preferCompactLayout = fals
               col = blockIndex % WEEKS_PER_ROW;
 
               const xOffset = isRight ? (layout.blockWidth + layout.bigGapBetweenBlocks) : 0;
-              cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS + xOffset;
-              cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+              cx = edgeInset + col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS + xOffset;
+              cy = edgeInset + row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
             } else {
               row = Math.floor(weekIndex / WEEKS_PER_ROW);
               col = weekIndex % WEEKS_PER_ROW;
-              cx = col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
-              cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+              cx = edgeInset + col * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
+              cy = edgeInset + row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
             }
 
             const isPast = weekIndex < safePastWeeks;
