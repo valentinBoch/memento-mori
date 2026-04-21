@@ -161,6 +161,47 @@ function buildPersonalizedPayload(sub, override = null) {
   return JSON.stringify({ title: "Memento Mori", body, url: "/" });
 }
 
+function isExpiredSubscriptionError(error) {
+  return error?.statusCode === 404 || error?.statusCode === 410;
+}
+
+async function sendNotifications({ endpoint, override = null, source }) {
+  const list = readSubscriptions();
+  const targets = endpoint ? list.filter((sub) => sub.endpoint === endpoint) : list;
+
+  if (!targets.length) {
+    return { found: 0, sent: 0 };
+  }
+
+  const expiredEndpoints = new Set();
+  let sent = 0;
+
+  for (const target of targets) {
+    const payload = buildPersonalizedPayload(target, override);
+
+    try {
+      await webPush.sendNotification(target.subscription, payload);
+      logNotification(target.endpoint, payload, source);
+      sent += 1;
+    } catch (error) {
+      const errorCode = error?.statusCode || error?.code;
+
+      if (isExpiredSubscriptionError(error)) {
+        console.warn(`${source} send failed -> removing sub:`, errorCode);
+        expiredEndpoints.add(target.endpoint);
+      } else {
+        console.error(`${source} send failed:`, errorCode || error?.message || error);
+      }
+    }
+  }
+
+  if (expiredEndpoints.size > 0) {
+    writeSubscriptions(list.filter((sub) => !expiredEndpoints.has(sub.endpoint)));
+  }
+
+  return { found: targets.length, sent };
+}
+
 // ---------- Logging notifications ----------
 function logNotification(endpoint, payload, source = "unknown") {
   try {
@@ -257,68 +298,43 @@ app.post("/api/push/test", async (req, res) => {
     return res.status(400).json({ error: "VAPID keys not configured" });
   }
   const { endpoint, title, body, url } = req.body || {};
-  const list = readSubscriptions();
-  const targets = endpoint ? list.filter((s) => s.endpoint === endpoint) : list;
-  if (!targets.length)
+  const result = await sendNotifications({
+    endpoint,
+    override: title || body || url ? { title, body, url } : null,
+    source: "test",
+  });
+
+  if (!result.found)
     return res.status(404).json({ error: "No subscription found" });
 
-  let sent = 0;
-  for (const s of targets) {
-    const payload = buildPersonalizedPayload(
-      s,
-      title || body || url ? { title, body, url } : null
-    );
-    try {
-      await webPush.sendNotification(s.subscription, payload);
-      logNotification(s.endpoint, payload, "test");
-      sent++;
-    } catch (e) {
-      console.warn(
-        "test send failed -> removing sub:",
-        e?.statusCode || e?.code
-      );
-      removeSubscription(s.endpoint);
-    }
-  }
-  return res.json({ ok: true, sent });
+  return res.json({ ok: true, sent: result.sent });
 });
 
-// Send now (immediate, personalized). GET ?endpoint=... or POST { endpoint }
-app.get("/api/push/now", async (req, res) => {
+async function handleImmediatePush(req, res) {
   try {
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+      return res.status(400).json({ error: "VAPID keys not configured" });
+    }
+
     const endpoint = req.query.endpoint;
-    const list = readSubscriptions();
-    const targets = endpoint
-      ? list.filter((s) => s.endpoint === endpoint)
-      : list;
-    if (!targets.length)
+    const result = await sendNotifications({ endpoint, source: "now" });
+
+    if (!result.found)
       return res.status(404).json({ error: "No subscription found" });
 
-    let sent = 0;
-    for (const s of targets) {
-      const payload = buildPersonalizedPayload(s);
-      try {
-        await webPush.sendNotification(s.subscription, payload);
-        logNotification(s.endpoint, payload, "now");
-        sent++;
-      } catch (e) {
-        console.warn(
-          "push/now failed -> removing sub:",
-          e?.statusCode || e?.code
-        );
-        removeSubscription(s.endpoint);
-      }
-    }
-    return res.json({ ok: true, sent });
-  } catch (e) {
-    console.error("/api/push/now error:", e);
+    return res.json({ ok: true, sent: result.sent });
+  } catch (error) {
+    console.error("/api/push/now error:", error);
     return res.status(500).json({ error: "Internal" });
   }
-});
-app.post("/api/push/now", async (req, res) => {
+}
+
+// Send now (immediate, personalized). GET ?endpoint=... or POST { endpoint }
+app.get("/api/push/now", handleImmediatePush);
+app.post("/api/push/now", (req, res) => {
   req.query = req.query || {};
   if (req.body?.endpoint) req.query.endpoint = req.body.endpoint;
-  return app._router.handle(req, res);
+  return handleImmediatePush(req, res);
 });
 
 // ---------- API 404 guard ----------
@@ -404,14 +420,18 @@ cron.schedule("* * * * *", async () => {
           s.lastSentDate = todayKey;
           changed = true;
         } catch (err) {
-          console.warn(
-            "cron send failed -> removing sub:",
-            err?.statusCode || err?.code
-          );
-          const idx = list.findIndex((x) => x.endpoint === s.endpoint);
-          if (idx >= 0) {
-            list.splice(idx, 1);
-            changed = true;
+          if (isExpiredSubscriptionError(err)) {
+            console.warn(
+              "cron send failed -> removing sub:",
+              err?.statusCode || err?.code
+            );
+            const idx = list.findIndex((x) => x.endpoint === s.endpoint);
+            if (idx >= 0) {
+              list.splice(idx, 1);
+              changed = true;
+            }
+          } else {
+            console.error("cron send failed:", err?.statusCode || err?.code || err);
           }
         }
       }

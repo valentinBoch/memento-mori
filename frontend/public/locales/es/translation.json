@@ -3,6 +3,10 @@
   "subtitle": "\"Recuerda que morirás.\" Visualiza tu vida, semana a semana.",
   "form": {
     "dobLabel": "Tu fecha de nacimiento",
+    "dobHint": "En móvil, usa el formato DD/MM/AAAA.",
+    "dayLabel": "Día",
+    "monthLabel": "Mes",
+    "yearLabel": "Año",
     "genderLabel": "Eres",
     "genderMale": "Un hombre ({{years}} años de esperanza de vida)",
     "genderFemale": "Una mujer ({{years}} años de esperanza de vida)",
@@ -12,7 +16,35 @@
   },
   "error": {
     "noDob": "Por favor, introduce tu fecha de nacimiento.",
+    "invalidDob": "Por favor, introduce una fecha de nacimiento válida.",
     "futureDob": "La fecha de nacimiento no puede ser en el futuro."
+  },
+  "toolbar": {
+    "label": "Opciones de visualización",
+    "language": "Idioma",
+    "lightMode": "Modo claro",
+    "darkMode": "Modo oscuro",
+    "accent": "Color de acento",
+    "accentTeal": "Turquesa",
+    "accentAmber": "Ámbar",
+    "accentIndigo": "Índigo"
+  },
+  "notifications": {
+    "enable": "Activar notificaciones",
+    "enabled": "Los recordatorios diarios están activos.",
+    "activating": "Activando...",
+    "test": "Enviar notificación de prueba",
+    "testing": "Enviando...",
+    "sync": "Actualizar ajustes de notificación",
+    "syncing": "Actualizando...",
+    "activateSuccess": "Notificaciones activadas.",
+    "activateError": "No se pudieron activar las notificaciones: {{error}}",
+    "testSuccess": "Solicitud de notificación de prueba enviada.",
+    "testError": "No se pudo enviar una notificación de prueba: {{error}}",
+    "syncSuccess": "Ajustes de notificación actualizados.",
+    "syncError": "No se pudieron actualizar los ajustes de notificación: {{error}}",
+    "missingSubscription": "No se encontró ninguna suscripción push. Activa primero las notificaciones.",
+    "unsupported": "Service Worker no compatible."
   },
   "stats": {
     "percentageLived": "{{percentage}}% de tu vida transcurrida.",

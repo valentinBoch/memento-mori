@@ -3,6 +3,10 @@
   "subtitle": "\"Remember you must die.\" Visualize your life, week by week.",
   "form": {
     "dobLabel": "Your date of birth",
+    "dobHint": "On mobile, use the format DD/MM/YYYY.",
+    "dayLabel": "Day",
+    "monthLabel": "Month",
+    "yearLabel": "Year",
     "genderLabel": "You are",
     "genderMale": "A man ({{years}} years life expectancy)",
     "genderFemale": "A woman ({{years}} years life expectancy)",
@@ -12,7 +16,35 @@
   },
   "error": {
     "noDob": "Please enter your date of birth.",
+    "invalidDob": "Please enter a valid date of birth.",
     "futureDob": "Date of birth cannot be in the future."
+  },
+  "toolbar": {
+    "label": "Display options",
+    "language": "Language",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "accent": "Accent color",
+    "accentTeal": "Teal",
+    "accentAmber": "Amber",
+    "accentIndigo": "Indigo"
+  },
+  "notifications": {
+    "enable": "Enable notifications",
+    "enabled": "Daily reminders are active.",
+    "activating": "Activating...",
+    "test": "Send test notification",
+    "testing": "Sending...",
+    "sync": "Update notification settings",
+    "syncing": "Updating...",
+    "activateSuccess": "Notifications enabled.",
+    "activateError": "Could not enable notifications: {{error}}",
+    "testSuccess": "Test notification request sent.",
+    "testError": "Could not send a test notification: {{error}}",
+    "syncSuccess": "Notification settings updated.",
+    "syncError": "Could not update notification settings: {{error}}",
+    "missingSubscription": "No push subscription found. Enable notifications first.",
+    "unsupported": "Service Worker not supported."
   },
   "stats": {
     "percentageLived": "{{percentage}}% of your life lived.",

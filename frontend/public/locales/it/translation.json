@@ -3,6 +3,10 @@
   "subtitle": "\"Ricorda che devi morire.\" Visualizza la tua vita, settimana per settimana.",
   "form": {
     "dobLabel": "La tua data di nascita",
+    "dobHint": "Su mobile, usa il formato GG/MM/AAAA.",
+    "dayLabel": "Giorno",
+    "monthLabel": "Mese",
+    "yearLabel": "Anno",
     "genderLabel": "Sei",
     "genderMale": "Un uomo ({{years}} anni di aspettativa di vita)",
     "genderFemale": "Una donna ({{years}} anni di aspettativa di vita)",
@@ -12,7 +16,35 @@
   },
   "error": {
     "noDob": "Per favore, inserisci la tua data di nascita.",
+    "invalidDob": "Per favore, inserisci una data di nascita valida.",
     "futureDob": "La data di nascita non può essere nel futuro."
+  },
+  "toolbar": {
+    "label": "Opzioni di visualizzazione",
+    "language": "Lingua",
+    "lightMode": "Modalità chiara",
+    "darkMode": "Modalità scura",
+    "accent": "Colore accento",
+    "accentTeal": "Turchese",
+    "accentAmber": "Ambra",
+    "accentIndigo": "Indaco"
+  },
+  "notifications": {
+    "enable": "Attiva le notifiche",
+    "enabled": "I promemoria giornalieri sono attivi.",
+    "activating": "Attivazione...",
+    "test": "Invia una notifica di prova",
+    "testing": "Invio...",
+    "sync": "Aggiorna le impostazioni di notifica",
+    "syncing": "Aggiornamento...",
+    "activateSuccess": "Notifiche attivate.",
+    "activateError": "Impossibile attivare le notifiche: {{error}}",
+    "testSuccess": "Richiesta di notifica di prova inviata.",
+    "testError": "Impossibile inviare una notifica di prova: {{error}}",
+    "syncSuccess": "Impostazioni di notifica aggiornate.",
+    "syncError": "Impossibile aggiornare le impostazioni di notifica: {{error}}",
+    "missingSubscription": "Nessuna sottoscrizione push trovata. Attiva prima le notifiche.",
+    "unsupported": "Service Worker non supportato."
   },
   "stats": {
     "percentageLived": "{{percentage}}% della tua vita trascorsa.",

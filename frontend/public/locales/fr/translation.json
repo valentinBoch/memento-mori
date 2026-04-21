@@ -3,6 +3,10 @@
   "subtitle": "\"Souviens-toi que tu vas mourir.\" Visualisez votre vie, semaine par semaine.",
   "form": {
     "dobLabel": "Votre date de naissance",
+    "dobHint": "Sur mobile, utilisez le format JJ/MM/AAAA.",
+    "dayLabel": "Jour",
+    "monthLabel": "Mois",
+    "yearLabel": "Année",
     "genderLabel": "Vous êtes",
     "genderMale": "Un homme (espérance de vie {{years}} ans)",
     "genderFemale": "Une femme (espérance de vie {{years}} ans)",
@@ -12,7 +16,35 @@
   },
   "error": {
     "noDob": "Veuillez entrer votre date de naissance.",
+    "invalidDob": "Veuillez entrer une date de naissance valide.",
     "futureDob": "La date de naissance ne peut pas être dans le futur."
+  },
+  "toolbar": {
+    "label": "Options d'affichage",
+    "language": "Langue",
+    "lightMode": "Mode clair",
+    "darkMode": "Mode sombre",
+    "accent": "Couleur d'accent",
+    "accentTeal": "Turquoise",
+    "accentAmber": "Ambre",
+    "accentIndigo": "Indigo"
+  },
+  "notifications": {
+    "enable": "Activer les notifications",
+    "enabled": "Les rappels quotidiens sont actifs.",
+    "activating": "Activation...",
+    "test": "Tester une notification",
+    "testing": "Envoi...",
+    "sync": "Mettre à jour les préférences",
+    "syncing": "Mise à jour...",
+    "activateSuccess": "Notifications activées.",
+    "activateError": "Impossible d'activer les notifications : {{error}}",
+    "testSuccess": "Demande de notification de test envoyée.",
+    "testError": "Impossible d'envoyer une notification de test : {{error}}",
+    "syncSuccess": "Préférences de notification mises à jour.",
+    "syncError": "Impossible de mettre à jour les préférences : {{error}}",
+    "missingSubscription": "Aucun abonnement push trouvé. Activez d'abord les notifications.",
+    "unsupported": "Service Worker non supporté."
   },
   "stats": {
     "percentageLived": "{{percentage}}% de votre vie écoulée.",

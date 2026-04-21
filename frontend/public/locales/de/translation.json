@@ -3,6 +3,10 @@
   "subtitle": "\"Bedenke, dass du sterben musst.\" Visualisiere dein Leben, Woche für Woche.",
   "form": {
     "dobLabel": "Dein Geburtsdatum",
+    "dobHint": "Auf dem Smartphone nutze das Format TT/MM/JJJJ.",
+    "dayLabel": "Tag",
+    "monthLabel": "Monat",
+    "yearLabel": "Jahr",
     "genderLabel": "Du bist",
     "genderMale": "Ein Mann ({{years}} Jahre Lebenserwartung)",
     "genderFemale": "Eine Frau ({{years}} Jahre Lebenserwartung)",
@@ -12,7 +16,35 @@
   },
   "error": {
     "noDob": "Bitte gib dein Geburtsdatum ein.",
+    "invalidDob": "Bitte gib ein gueltiges Geburtsdatum ein.",
     "futureDob": "Das Geburtsdatum kann nicht in der Zukunft liegen."
+  },
+  "toolbar": {
+    "label": "Anzeigeoptionen",
+    "language": "Sprache",
+    "lightMode": "Heller Modus",
+    "darkMode": "Dunkler Modus",
+    "accent": "Akzentfarbe",
+    "accentTeal": "Petrol",
+    "accentAmber": "Amber",
+    "accentIndigo": "Indigo"
+  },
+  "notifications": {
+    "enable": "Benachrichtigungen aktivieren",
+    "enabled": "Taegliche Erinnerungen sind aktiv.",
+    "activating": "Wird aktiviert...",
+    "test": "Testbenachrichtigung senden",
+    "testing": "Wird gesendet...",
+    "sync": "Benachrichtigungseinstellungen aktualisieren",
+    "syncing": "Wird aktualisiert...",
+    "activateSuccess": "Benachrichtigungen aktiviert.",
+    "activateError": "Benachrichtigungen konnten nicht aktiviert werden: {{error}}",
+    "testSuccess": "Anfrage fuer eine Testbenachrichtigung gesendet.",
+    "testError": "Eine Testbenachrichtigung konnte nicht gesendet werden: {{error}}",
+    "syncSuccess": "Benachrichtigungseinstellungen aktualisiert.",
+    "syncError": "Benachrichtigungseinstellungen konnten nicht aktualisiert werden: {{error}}",
+    "missingSubscription": "Kein Push-Abonnement gefunden. Aktiviere zuerst die Benachrichtigungen.",
+    "unsupported": "Service Worker wird nicht unterstuetzt."
   },
   "stats": {
     "percentageLived": "{{percentage}}% deines Lebens gelebt.",

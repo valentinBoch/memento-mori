@@ -1,23 +1,40 @@
-// frontend/src/App.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LifeGrid from './components/LifeGrid';
 import './App.css';
-import { setLanguage, getCurrentLanguage, setThemePreference, getThemePreference, setAccentPreference, getAccentPreference } from './i18n';
+import {
+  setLanguage as persistLanguage,
+  getCurrentLanguage,
+  setThemePreference,
+  getThemePreference,
+  setAccentPreference,
+  getAccentPreference,
+} from './i18n';
 
-// Détection basique mobile
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
 const LIFE_EXPECTANCY = { homme: 80, femme: 85 };
 const LOCAL_STORAGE_KEY = 'momentoMoriData';
+const DEFAULT_FORM_DATA = { dob: '', gender: 'homme', customLifeExpectancy: 80 };
+const LANGUAGE_OPTIONS = [
+  { value: 'fr', label: 'FR' },
+  { value: 'en', label: 'EN' },
+  { value: 'es', label: 'ES' },
+  { value: 'it', label: 'IT' },
+  { value: 'de', label: 'DE' },
+];
+const ACCENT_OPTIONS = ['teal', 'amber', 'indigo'];
 
-// ---- Helpers Push/Notifications ----
 function base64UrlToUint8Array(base64UrlString) {
   const padding = '='.repeat((4 - (base64UrlString.length % 4)) % 4);
   const base64 = (base64UrlString + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(base64);
   const output = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
+
+  for (let index = 0; index < raw.length; index += 1) {
+    output[index] = raw.charCodeAt(index);
+  }
+
   return output;
 }
 
@@ -27,30 +44,37 @@ async function activateNotificationsFlow() {
   if (!('serviceWorker' in navigator)) throw new Error('Service Worker non supporté');
 
   if (Notification.permission === 'default') {
-    const p = await Notification.requestPermission();
-    if (p !== 'granted') throw new Error(`Permission = ${p}`);
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') throw new Error(`Permission = ${permission}`);
   } else if (Notification.permission !== 'granted') {
     throw new Error(`Permission = ${Notification.permission}`);
   }
 
-  const reg = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.ready;
+  const response = await fetch('/api/push/public-key', { cache: 'no-store' });
 
-  const r = await fetch('/api/push/public-key', { cache: 'no-store' });
-  if (!r.ok) throw new Error('public-key HTTP ' + r.status);
-  const { publicKey } = await r.json();
+  if (!response.ok) throw new Error(`public-key HTTP ${response.status}`);
+
+  const { publicKey } = await response.json();
   if (!publicKey) throw new Error('Clé publique VAPID absente');
 
-  let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
+  let subscription = await registration.pushManager.getSubscription();
+  if (!subscription) {
+    subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: base64UrlToUint8Array(publicKey),
     });
   } else {
-    const hasKeys = !!sub.getKey('p256dh') && !!sub.getKey('auth');
+    const hasKeys = Boolean(subscription.getKey('p256dh')) && Boolean(subscription.getKey('auth'));
+
     if (!hasKeys) {
-      try { await sub.unsubscribe(); } catch {}
-      sub = await reg.pushManager.subscribe({
+      try {
+        await subscription.unsubscribe();
+      } catch {
+        // noop
+      }
+
+      subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: base64UrlToUint8Array(publicKey),
       });
@@ -58,13 +82,13 @@ async function activateNotificationsFlow() {
   }
 
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const res = await fetch('/api/push/subscribe', {
+  const subscribeResponse = await fetch('/api/push/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription: sub, timezone }),
+    body: JSON.stringify({ subscription, timezone }),
   });
-  if (!res.ok) throw new Error('subscribe HTTP ' + res.status);
-  return true;
+
+  if (!subscribeResponse.ok) throw new Error(`subscribe HTTP ${subscribeResponse.status}`);
 }
 
 async function resyncPushSubscription() {
@@ -73,84 +97,174 @@ async function resyncPushSubscription() {
   if (!('serviceWorker' in navigator)) return;
 
   try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (!sub) return;
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) return;
+
     await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        subscription: sub,
+        subscription,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       }),
     });
-  } catch (e) {
-    console.warn('Resync subscription failed:', e);
+  } catch (error) {
+    console.warn('Resync subscription failed:', error);
   }
+}
+
+function clampInt(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getTodayLocalDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getDobSegments(dob = '') {
+  const [year = '', month = '', day = ''] = String(dob).split('-');
+  return { year, month, day };
+}
+
+function buildDobString({ year = '', month = '', day = '' }) {
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateFromInput(value) {
+  if (typeof value !== 'string') return null;
+
+  const { year, month, day } = getDobSegments(value);
+  if (!/^\d{4}$/.test(year) || !/^\d{2}$/.test(month) || !/^\d{2}$/.test(day)) return null;
+
+  const parsedYear = Number(year);
+  const parsedMonth = Number(month);
+  const parsedDay = Number(day);
+  const date = new Date(Date.UTC(parsedYear, parsedMonth - 1, parsedDay));
+
+  const isValidDate =
+    date.getUTCFullYear() === parsedYear &&
+    date.getUTCMonth() === parsedMonth - 1 &&
+    date.getUTCDate() === parsedDay;
+
+  return isValidDate ? date : null;
+}
+
+function getLifeExpectancyYears(data) {
+  if (data.gender === 'custom') {
+    return clampInt(parseInt(data.customLifeExpectancy, 10) || LIFE_EXPECTANCY.homme, 1, 120);
+  }
+
+  return LIFE_EXPECTANCY[data.gender] || LIFE_EXPECTANCY.homme;
+}
+
+function calculateLifeCalendar(data) {
+  const rawDob = String(data.dob || '');
+
+  if (!rawDob.replace(/-/g, '')) {
+    return { errorKey: 'error.noDob' };
+  }
+
+  const birthDate = parseDateFromInput(rawDob);
+  if (!birthDate) {
+    return { errorKey: 'error.invalidDob' };
+  }
+
+  const today = new Date();
+  const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  if (birthDate > todayUTC) {
+    return { errorKey: 'error.futureDob' };
+  }
+
+  const lifeExpectancyYears = getLifeExpectancyYears(data);
+  const endDate = new Date(Date.UTC(
+    birthDate.getUTCFullYear() + lifeExpectancyYears,
+    birthDate.getUTCMonth(),
+    birthDate.getUTCDate(),
+  ));
+
+  const millisecondsInWeek = 1000 * 60 * 60 * 24 * 7;
+  const totalWeeks = Math.max(1, Math.floor((endDate - birthDate) / millisecondsInWeek));
+  const pastWeeks = clampInt(Math.floor((todayUTC - birthDate) / millisecondsInWeek), 0, totalWeeks);
+  const { year, month, day } = getDobSegments(rawDob);
+
+  return {
+    normalizedData: {
+      dob: `${year}-${month}-${day}`,
+      gender: data.gender,
+      customLifeExpectancy: lifeExpectancyYears,
+    },
+    lifeData: {
+      totalWeeks,
+      pastWeeks,
+      birthDate,
+    },
+  };
+}
+
+function syncThemeMeta(theme) {
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) {
+    themeMeta.setAttribute('content', theme === 'light' ? '#f6efe6' : '#111111');
+  }
+}
+
+async function readErrorMessage(response, fallbackMessage) {
+  const data = await response.json().catch(() => ({}));
+  return data.error || fallbackMessage;
 }
 
 function App() {
   const { t } = useTranslation();
-
-  const [formData, setFormData] = useState({
-    dob: '',
-    gender: 'homme',
-    customLifeExpectancy: 80
-  });
-
+  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [lifeData, setLifeData] = useState(null);
-  const [error, setError] = useState('');
-  const [notifPermission, setNotifPermission] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
+  const [errorKey, setErrorKey] = useState('');
+  const [notifPermission, setNotifPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default',
+  );
+  const [theme, setTheme] = useState(() => getThemePreference());
+  const [accent, setAccent] = useState(() => getAccentPreference());
+  const [language, setLanguage] = useState(() => getCurrentLanguage());
+  const [notificationAction, setNotificationAction] = useState('');
 
-  // Refs pour flux desktop + custom
   const dateInputRef = useRef(null);
   const customAgeRef = useRef(null);
-
-  // Refs pour l’auto-focus mobile JJ → MM → AAAA
   const dayRef = useRef(null);
   const monthRef = useRef(null);
   const yearRef = useRef(null);
 
-  // Helpers
-  const getTodayLocalDateString = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   useEffect(() => {
-    if (!isMobile && dateInputRef.current) dateInputRef.current.focus();
+    if (!isMobile && dateInputRef.current) {
+      dateInputRef.current.focus();
+    }
 
     try {
       const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        if (
-          parsedData &&
-          typeof parsedData === 'object' &&
-          typeof parsedData.dob === 'string' &&
-          ['homme', 'femme', 'custom'].includes(parsedData.gender)
-        ) {
-          setFormData({
-            dob: parsedData.dob,
-            gender: parsedData.gender,
-            customLifeExpectancy: Math.max(1, Math.min(120, parseInt(parsedData.customLifeExpectancy, 10) || 80)),
-          });
-          calculateWeeks(null, {
-            dob: parsedData.dob,
-            gender: parsedData.gender,
-            customLifeExpectancy: Math.max(1, Math.min(120, parseInt(parsedData.customLifeExpectancy, 10) || 80)),
-          });
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to read saved data:', e);
-    }
+      if (!savedData) return;
 
-    document.documentElement.setAttribute('data-theme', 'dark');
-    document.documentElement.setAttribute('data-accent', 'teal');
+      const parsedData = JSON.parse(savedData);
+      if (!parsedData || typeof parsedData !== 'object') return;
+
+      const result = calculateLifeCalendar({
+        dob: parsedData.dob,
+        gender: ['homme', 'femme', 'custom'].includes(parsedData.gender) ? parsedData.gender : 'homme',
+        customLifeExpectancy: parsedData.customLifeExpectancy,
+      });
+
+      if (result.lifeData) {
+        setFormData(result.normalizedData);
+        setLifeData(result.lifeData);
+      } else {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+      }
+    } catch (error) {
+      console.warn('Failed to read saved data:', error);
+    }
 
     if (typeof Notification !== 'undefined') {
       setNotifPermission(Notification.permission);
@@ -158,161 +272,274 @@ function App() {
   }, []);
 
   useEffect(() => {
+    setThemePreference(theme);
+    syncThemeMeta(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    setAccentPreference(accent);
+  }, [accent]);
+
+  useEffect(() => {
+    persistLanguage(language);
+  }, [language]);
+
+  useEffect(() => {
     if (formData.gender === 'custom') {
-      setTimeout(() => { if (customAgeRef.current) customAgeRef.current.focus(); }, 0);
+      window.setTimeout(() => {
+        customAgeRef.current?.focus();
+      }, 0);
     }
   }, [formData.gender]);
 
-  // Ré-envoi auto des abonnements (montage + retour onglet)
-  useEffect(() => { resyncPushSubscription(); }, []);
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') resyncPushSubscription(); };
+    resyncPushSubscription();
+  }, []);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        resyncPushSubscription();
+        if (typeof Notification !== 'undefined') {
+          setNotifPermission(Notification.permission);
+        }
+      }
+    };
+
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
-  const clampInt = (value, min, max) => Math.max(min, Math.min(max, value));
+  const todayStr = getTodayLocalDateString();
+  const dobSegments = getDobSegments(formData.dob);
 
-  const parseDateFromInput = (value) => {
-    const [y, m, d] = value.split('-').map(Number);
-    return new Date(Date.UTC(y, m - 1, d));
-  };
+  const handleInputChange = (event) => {
+    const { name, value, type } = event.target;
+    setErrorKey('');
 
-  const handleInputChange = (e) => {
-    const { name, value, type } = e.target;
-    if (type === 'number') {
-      const parsed = parseInt(value, 10);
-      const safeNumber = Number.isFinite(parsed) ? clampInt(parsed, 1, 120) : '';
-      setFormData({ ...formData, [name]: safeNumber });
-      return;
-    }
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const calculateWeeks = (e, savedFormData = null) => {
-    if (e) e.preventDefault();
-
-    const dataToProcess = savedFormData || formData;
-
-    if (!dataToProcess.dob) {
-      setError(t('error.noDob'));
-      return;
-    }
-
-    const birthDate = parseDateFromInput(dataToProcess.dob);
-    const today = new Date();
-    const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-
-    if (birthDate > todayUTC) {
-      setError(t('error.futureDob'));
-      return;
-    }
-
-    let lifeExpectancyYears = dataToProcess.gender === 'custom'
-      ? (parseInt(dataToProcess.customLifeExpectancy, 10) || 80)
-      : LIFE_EXPECTANCY[dataToProcess.gender];
-
-    lifeExpectancyYears = clampInt(lifeExpectancyYears, 1, 120);
-
-    const endDate = new Date(Date.UTC(
-      birthDate.getUTCFullYear() + lifeExpectancyYears,
-      birthDate.getUTCMonth(),
-      birthDate.getUTCDate()
-    ));
-
-    const MS_IN_WEEK = 1000 * 60 * 60 * 24 * 7;
-    const totalWeeks = Math.floor((endDate - birthDate) / MS_IN_WEEK);
-    const pastWeeks = Math.floor((todayUTC - birthDate) / MS_IN_WEEK);
-
-    setError('');
-    setLifeData({ totalWeeks, pastWeeks, birthDate });
-
-    if (!savedFormData) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
-          dob: dataToProcess.dob,
-          gender: dataToProcess.gender,
-          customLifeExpectancy: lifeExpectancyYears,
-        }));
-      } catch (e2) {
-        console.warn('Failed to save data:', e2);
+    setFormData((current) => {
+      if (type === 'number') {
+        const parsed = parseInt(value, 10);
+        return {
+          ...current,
+          [name]: Number.isFinite(parsed) ? clampInt(parsed, 1, 120) : '',
+        };
       }
+
+      return {
+        ...current,
+        [name]: value,
+      };
+    });
+  };
+
+  const updateDobSegment = (segment, value, maxLength) => {
+    const nextValue = value.replace(/\D/g, '').slice(0, maxLength);
+    setErrorKey('');
+
+    setFormData((current) => {
+      const nextSegments = {
+        ...getDobSegments(current.dob),
+        [segment]: nextValue,
+      };
+
+      return {
+        ...current,
+        dob: buildDobString(nextSegments),
+      };
+    });
+  };
+
+  const calculateWeeks = (event) => {
+    event?.preventDefault();
+
+    const result = calculateLifeCalendar(formData);
+    if (result.errorKey) {
+      setLifeData(null);
+      setErrorKey(result.errorKey);
+      return;
+    }
+
+    setErrorKey('');
+    setFormData(result.normalizedData);
+    setLifeData(result.lifeData);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(result.normalizedData));
+    } catch (error) {
+      console.warn('Failed to save data:', error);
     }
   };
 
   const resetApp = () => {
     setLifeData(null);
-    setFormData({ dob: '', gender: 'homme', customLifeExpectancy: 80 });
-    setError('');
+    setFormData(DEFAULT_FORM_DATA);
+    setErrorKey('');
     localStorage.removeItem(LOCAL_STORAGE_KEY);
-    setTimeout(() => { if (dateInputRef.current) dateInputRef.current.focus(); }, 0);
+
+    window.setTimeout(() => {
+      if (!isMobile) {
+        dateInputRef.current?.focus();
+      } else {
+        dayRef.current?.focus();
+      }
+    }, 0);
   };
 
-  // Handlers notifications (boutons)
+  const syncPrefsToBackend = async ({ silent = false } = {}) => {
+    const manageBusyState = !silent;
+
+    if (!('serviceWorker' in navigator)) {
+      if (!silent) {
+        alert(t('notifications.syncError', { error: t('notifications.unsupported') }));
+      }
+      return false;
+    }
+
+    if (manageBusyState) {
+      setNotificationAction('sync');
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        if (!silent) {
+          alert(t('notifications.missingSubscription'));
+        }
+        return false;
+      }
+
+      const response = await fetch('/api/push/prefs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          dob: formData.dob || null,
+          gender: formData.gender || 'homme',
+          customLifeExpectancy: formData.customLifeExpectancy || undefined,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response, 'Erreur sauvegarde préférences'));
+      }
+
+      if (!silent) {
+        alert(t('notifications.syncSuccess'));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('syncPrefsToBackend error:', error);
+      if (!silent) {
+        alert(t('notifications.syncError', { error: error?.message || String(error) }));
+      }
+      return false;
+    } finally {
+      if (manageBusyState) {
+        setNotificationAction('');
+      }
+    }
+  };
+
   const requestNotificationPermission = async () => {
+    setNotificationAction('enable');
+
     try {
       await activateNotificationsFlow();
       setNotifPermission('granted');
-      try { await syncPrefsToBackend(); } catch (_) {}
-      alert('Notifications activées ✅');
-    } catch (err) {
-      console.error('Activation notifications - erreur:', err);
-      alert('Impossible d’activer les notifications : ' + (err?.message || err));
+      await syncPrefsToBackend({ silent: true });
+      alert(t('notifications.activateSuccess'));
+    } catch (error) {
+      console.error('Activation notifications - erreur:', error);
+      alert(t('notifications.activateError', { error: error?.message || String(error) }));
+    } finally {
+      if (typeof Notification !== 'undefined') {
+        setNotifPermission(Notification.permission);
+      }
+      setNotificationAction('');
     }
   };
 
   const sendTestNotification = async () => {
-    try {
-      await fetch('/api/push/test', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      alert('Demande de test envoyée.');
-    } catch (e) {
-      alert('Échec envoi test.');
-    }
-  };
+    setNotificationAction('test');
 
-  const syncPrefsToBackend = async () => {
     try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        alert('Aucun abonnement push trouvé. Active d\'abord les notifications.');
-        return;
-      }
-      const endpoint = sub.endpoint;
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const payload = {
-        endpoint,
-        dob: formData.dob || null,
-        gender: formData.gender || 'homme',
-        customLifeExpectancy: formData.customLifeExpectancy || undefined,
-        timezone,
-      };
-      const resp = await fetch('/api/push/prefs', {
-        method: 'PUT',
+      const response = await fetch('/api/push/test', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
       });
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        throw new Error(data.error || 'Erreur sauvegarde préférences');
+
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response, 'Échec envoi test'));
       }
-      alert('Préférences de notification mises à jour.');
-    } catch (e) {
-      console.error('syncPrefsToBackend error:', e);
-      alert('Impossible de synchroniser les préférences.');
+
+      alert(t('notifications.testSuccess'));
+    } catch (error) {
+      console.error('sendTestNotification error:', error);
+      alert(t('notifications.testError', { error: error?.message || String(error) }));
+    } finally {
+      setNotificationAction('');
     }
   };
 
-  const todayStr = getTodayLocalDateString();
+  const toggleTheme = () => {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  };
 
   return (
     <div className="App">
+      <div className="background-orb orb-a" aria-hidden="true" />
+      <div className="background-orb orb-b" aria-hidden="true" />
+
       <header>
+        <div className="toolbar" aria-label={t('toolbar.label')}>
+          <div className="control select-wrapper compact">
+            <label className="visually-hidden" htmlFor="language-switcher">
+              {t('toolbar.language')}
+            </label>
+            <select
+              id="language-switcher"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value)}
+            >
+              {LANGUAGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button type="button" className="theme-toggle" onClick={toggleTheme}>
+            {theme === 'dark' ? t('toolbar.lightMode') : t('toolbar.darkMode')}
+          </button>
+
+          <div className="control select-wrapper compact">
+            <label className="visually-hidden" htmlFor="accent-switcher">
+              {t('toolbar.accent')}
+            </label>
+            <select
+              id="accent-switcher"
+              value={accent}
+              onChange={(event) => setAccent(event.target.value)}
+            >
+              {ACCENT_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {t(`toolbar.accent${option[0].toUpperCase()}${option.slice(1)}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="header-text">
           <h1>{t('title')}</h1>
           <p className="subtitle">{t('subtitle')}</p>
         </div>
-        <div className="toolbar">{/* … */}</div>
       </header>
 
       <main>
@@ -322,57 +549,54 @@ function App() {
               <label htmlFor="dob">{t('form.dobLabel')}</label>
 
               {isMobile ? (
-                // ----- VERSION MOBILE : 3 champs + auto-focus -----
                 <div className="dob-segmented">
                   <input
                     ref={dayRef}
                     type="tel"
                     inputMode="numeric"
+                    autoComplete="bday-day"
                     name="dob-day"
+                    aria-label={t('form.dayLabel')}
                     placeholder="JJ"
-                    value={formData.dob ? (formData.dob.split('-')[2] || '') : ''}
-                    onChange={(e) => {
-                      const day = e.target.value.replace(/\D/g, '').slice(0, 2);
-                      const parts = formData.dob ? formData.dob.split('-') : ['', '', ''];
-                      parts[2] = day;
-                      setFormData({ ...formData, dob: parts.join('-') });
-                      if (day.length === 2) monthRef.current?.focus();
+                    value={dobSegments.day}
+                    onChange={(event) => {
+                      updateDobSegment('day', event.target.value, 2);
+                      if (event.target.value.replace(/\D/g, '').length === 2) {
+                        monthRef.current?.focus();
+                      }
                     }}
                   />
-                  <span>-</span>
+                  <span>/</span>
                   <input
                     ref={monthRef}
                     type="tel"
                     inputMode="numeric"
+                    autoComplete="bday-month"
                     name="dob-month"
+                    aria-label={t('form.monthLabel')}
                     placeholder="MM"
-                    value={formData.dob ? (formData.dob.split('-')[1] || '') : ''}
-                    onChange={(e) => {
-                      const month = e.target.value.replace(/\D/g, '').slice(0, 2);
-                      const parts = formData.dob ? formData.dob.split('-') : ['', '', ''];
-                      parts[1] = month;
-                      setFormData({ ...formData, dob: parts.join('-') });
-                      if (month.length === 2) yearRef.current?.focus();
+                    value={dobSegments.month}
+                    onChange={(event) => {
+                      updateDobSegment('month', event.target.value, 2);
+                      if (event.target.value.replace(/\D/g, '').length === 2) {
+                        yearRef.current?.focus();
+                      }
                     }}
                   />
-                  <span>-</span>
+                  <span>/</span>
                   <input
                     ref={yearRef}
                     type="tel"
                     inputMode="numeric"
+                    autoComplete="bday-year"
                     name="dob-year"
+                    aria-label={t('form.yearLabel')}
                     placeholder="AAAA"
-                    value={formData.dob ? (formData.dob.split('-')[0] || '') : ''}
-                    onChange={(e) => {
-                      const year = e.target.value.replace(/\D/g, '').slice(0, 4);
-                      const parts = formData.dob ? formData.dob.split('-') : ['', '', ''];
-                      parts[0] = year;
-                      setFormData({ ...formData, dob: parts.join('-') });
-                    }}
+                    value={dobSegments.year}
+                    onChange={(event) => updateDobSegment('year', event.target.value, 4)}
                   />
                 </div>
               ) : (
-                // ----- VERSION DESKTOP -----
                 <input
                   type="date"
                   id="dob"
@@ -384,6 +608,8 @@ function App() {
                   ref={dateInputRef}
                 />
               )}
+
+              {isMobile ? <p className="field-hint">{t('form.dobHint')}</p> : null}
             </div>
 
             <div className="form-group select-wrapper">
@@ -395,7 +621,7 @@ function App() {
               </select>
             </div>
 
-            {formData.gender === 'custom' && (
+            {formData.gender === 'custom' ? (
               <div className="form-group">
                 <label htmlFor="customLifeExpectancy">{t('form.customAgeLabel')}</label>
                 <input
@@ -409,38 +635,71 @@ function App() {
                   ref={customAgeRef}
                 />
               </div>
-            )}
+            ) : null}
 
-            {error && <p className="error-message" role="alert" aria-live="polite">{error}</p>}
+            {errorKey ? (
+              <p className="error-message" role="alert" aria-live="polite">
+                {t(errorKey)}
+              </p>
+            ) : null}
+
             <button type="submit">{t('form.submitButton')}</button>
           </form>
         ) : (
-          <>
+          <div className="results-stack">
             <LifeGrid
               totalWeeks={lifeData.totalWeeks}
               pastWeeks={lifeData.pastWeeks}
               birthDate={lifeData.birthDate}
             />
-            <button onClick={resetApp} className="reset-button">{t('resetButton')}</button>
 
-            <div style={{ marginTop: '12px' }}>
+            <button type="button" onClick={resetApp} className="reset-button">
+              {t('resetButton')}
+            </button>
+
+            <div className="notification-panel">
               {notifPermission !== 'granted' ? (
-                <button type="button" onClick={requestNotificationPermission} className="reset-button">
-                  Activer les notifications
+                <button
+                  type="button"
+                  onClick={requestNotificationPermission}
+                  className="notification-button"
+                  disabled={notificationAction === 'enable'}
+                >
+                  {notificationAction === 'enable'
+                    ? t('notifications.activating')
+                    : t('notifications.enable')}
                 </button>
               ) : (
                 <>
-                  <p style={{ opacity: 0.8 }}>Notifications activées</p>
-                  <button type="button" onClick={sendTestNotification} className="reset-button" style={{ marginTop: 8 }}>
-                    Tester une notification
-                  </button>
-                  <button type="button" onClick={syncPrefsToBackend} className="reset-button" style={{ marginTop: 8 }}>
-                    Mettre à jour préférences
-                  </button>
+                  <p className="notification-hint">{t('notifications.enabled')}</p>
+
+                  <div className="notification-actions">
+                    <button
+                      type="button"
+                      onClick={sendTestNotification}
+                      className="reset-button"
+                      disabled={notificationAction === 'test'}
+                    >
+                      {notificationAction === 'test'
+                        ? t('notifications.testing')
+                        : t('notifications.test')}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => syncPrefsToBackend()}
+                      className="reset-button"
+                      disabled={notificationAction === 'sync'}
+                    >
+                      {notificationAction === 'sync'
+                        ? t('notifications.syncing')
+                        : t('notifications.sync')}
+                    </button>
+                  </div>
                 </>
               )}
             </div>
-          </>
+          </div>
         )}
       </main>
 

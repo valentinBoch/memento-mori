@@ -13,6 +13,8 @@ const YEARS_THRESHOLD_FOR_SPLIT = 55;
 
 const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
   const { t, i18n } = useTranslation();
+  const safePastWeeks = Math.max(0, Math.min(pastWeeks, totalWeeks));
+  const weeksLeft = Math.max(totalWeeks - safePastWeeks, 0);
 
   // Precompute and memoize arrays/derived values to avoid heavy work on each render
   const weeksArray = useMemo(() => Array.from({ length: totalWeeks }, (_, i) => i), [totalWeeks]);
@@ -45,7 +47,9 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
   }, [totalRows, totalWeeks]);
 
   const viewBox = `0 0 ${layout.svgWidth} ${layout.svgHeight}`;
-  const percentageLived = ((pastWeeks / totalWeeks) * 100).toFixed(1);
+  const percentageLived = totalWeeks > 0
+    ? ((safePastWeeks / totalWeeks) * 100).toFixed(1)
+    : '0.0';
 
   // Reuse a single date formatter and precomputed birth timestamp
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }), [i18n.language]);
@@ -61,11 +65,17 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
     <div className="life-grid-container">
       <div className="stats">
         <p><span>{t('stats.percentageLived', { percentage: percentageLived })}</span></p>
-        <p><span>{t('stats.weeksLived', { count: pastWeeks })}</span></p>
-        <p><span>{t('stats.weeksLeft', { count: totalWeeks - pastWeeks })}</span></p>
+        <p><span>{t('stats.weeksLived', { count: safePastWeeks })}</span></p>
+        <p><span>{t('stats.weeksLeft', { count: weeksLeft })}</span></p>
       </div>
 
-      <svg className="life-grid-svg" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
+      <svg
+        className="life-grid-svg"
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={t('stats.percentageLived', { percentage: percentageLived })}
+      >
         {weeksArray.map((weekIndex) => {
           let row, col, cx, cy;
 
@@ -87,8 +97,8 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
             cy = row * DOT_DIAMETER_WITH_GAP + DOT_RADIUS;
           }
 
-          const isPast = weekIndex < pastWeeks;
-          const isCurrent = weekIndex === pastWeeks;
+          const isPast = weekIndex < safePastWeeks;
+          const isCurrent = weekIndex === safePastWeeks;
 
           // Assign a single, mutually exclusive class for styling
           let className = 'dot';
@@ -102,8 +112,9 @@ const LifeGrid = ({ totalWeeks, pastWeeks, birthDate }) => {
 
           return (
             <g key={weekIndex}>
-              <circle cx={cx} cy={cy} r={DOT_RADIUS} className={className} />
-              <title>{t('tooltip.weekOf', { date: getWeekDate(weekIndex) })}</title>
+              <circle cx={cx} cy={cy} r={DOT_RADIUS} className={className}>
+                <title>{t('tooltip.weekOf', { date: getWeekDate(weekIndex) })}</title>
+              </circle>
             </g>
           );
         })}
